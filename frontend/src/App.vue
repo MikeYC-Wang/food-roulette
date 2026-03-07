@@ -59,12 +59,29 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
+import axios from 'axios';
 import Roulette from './components/Roulette.vue';
 import FilterDrawer from './components/FilterDrawer.vue';
 import { useLocation } from './composables/useLocation'; // 引入定位邏輯
 
 // 定位功能
 const { location, getLocation } = useLocation();
+
+// 取得 Roulette 元件的參考，用於呼叫其內部方法
+const rouletteRef = ref<InstanceType<typeof Roulette> | null>(null);
+
+// 狀態管理
+const isSpinning = ref(false);
+const showResult = ref(false);
+const selectedFood = ref<{ name: string } | null>(null);
+const isFilterOpen = ref(false);
+
+// 儲存目前套用的篩選條件 (預設值)
+const currentFilters = ref({
+  distance: 500,
+  types: [] as string[],
+  avoids: [] as string[]
+});
 
 // 根據定位狀態切換 FontAwesome 圖示
 const statusIconClass = computed(() => {
@@ -77,46 +94,58 @@ const statusIconClass = computed(() => {
   }
 });
 
-// 取得 Roulette 元件的參考
-const rouletteRef = ref<InstanceType<typeof Roulette> | null>(null);
-
-// 狀態管理
-const isSpinning = ref(false);
-const showResult = ref(false);
-const selectedFood = ref<{ name: string } | null>(null);
-const isFilterOpen = ref(false);
-
 // 頁面掛載時自動獲取定位
 onMounted(() => {
   getLocation();
 });
 
-// 觸發旋轉
-const triggerSpin = () => {
-  if (isSpinning.value || !rouletteRef.value) return;
-  
-  isSpinning.value = true;
-  showResult.value = false;
-  rouletteRef.value.spin();
+// 接收來自篩選抽屜的條件並更新狀態
+const handleApplyFilters = (filters: any) => {
+  currentFilters.value = filters;
+  console.log('篩選條件已更新:', currentFilters.value);
 };
 
-// 旋轉結束後的處理
+// 觸發旋轉：先向後端 API 取得餐廳名單，再啟動輪盤動畫
+const triggerSpin = async () => {
+  if (isSpinning.value || !rouletteRef.value) return;
+  
+  try {
+    isSpinning.value = true;
+    showResult.value = false;
+
+    // 向 FastAPI 後端發送 POST 請求
+    const response = await axios.post('http://localhost:8000/api/spin', {
+      lat: location.value.lat,
+      lng: location.value.lng,
+      distance: currentFilters.value.distance,
+      types: currentFilters.value.types,
+      avoids: currentFilters.value.avoids
+    });
+
+    if (response.data.status === 'success') {
+      // 1. 更新輪盤內的餐廳選項 (需在 Roulette.vue 實作 setOptions)
+      rouletteRef.value.setOptions(response.data.results);
+      
+      // 2. 呼叫輪盤開始旋轉
+      rouletteRef.value.spin();
+    }
+  } catch (error) {
+    console.error('API 請求失敗:', error);
+    alert('無法與後端連線，請確認 FastAPI 伺服器是否已啟動');
+    isSpinning.value = false;
+  }
+};
+
+// 輪盤旋轉結束後的處理邏輯
 const handleSpinEnd = (result: { name: string }) => {
   isSpinning.value = false;
   selectedFood.value = result;
-  showResult.value = true;
+  showResult.value = true; // 顯示結果彈窗
 };
 
 // 關閉結果卡片
 const closeResult = () => {
   showResult.value = false;
-};
-
-// 接收來自篩選抽屜的條件
-const handleApplyFilters = (filters: any) => {
-  console.log('目前定位:', { lat: location.value.lat, lng: location.value.lng });
-  console.log('套用的篩選條件:', filters);
-  // 未來會將定位座標與篩選條件一同打包發送給 API
 };
 </script>
 

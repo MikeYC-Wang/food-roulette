@@ -64,7 +64,12 @@ const spin = () => {
   }, 4000);
 };
 
-defineExpose({ spin });
+const setOptions = (newOptions: { name: string }[]) => {
+  options.value = newOptions;
+};
+
+defineExpose({ spin, setOptions });
+
 </script>
 
 <style src="../style/Roulette.css" scoped></style>
