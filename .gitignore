@@ -4,6 +4,7 @@ frontend/dist/
 frontend/.env
 
 # 後端忽略清單
+backend/.env
 backend/venv/
 backend/__pycache__/
 *.pyc

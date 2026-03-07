@@ -22,14 +22,6 @@
 /* 會旋轉的內層：只處理圓餅圖底色 */
 .wheel-spin-area {
   @apply w-full h-full rounded-full relative;
-  background: conic-gradient(
-    #E9C46A 0deg 60deg,      
-    #2A9D8F 60deg 120deg,    
-    #F4F1DE 120deg 180deg,   
-    #E9C46A 180deg 240deg,   
-    #2A9D8F 240deg 300deg,   
-    #F4F1DE 300deg 360deg    
-  );
 }
 
 .wheel-content {
@@ -41,8 +33,7 @@
 }
 
 .item-text {
-  @apply absolute text-2xl tracking-widest;
+  @apply absolute text-2xl tracking-widest whitespace-nowrap;
   top: 50%;
   left: 50%;
-  transform: translate(-50%, -50%) rotate(30deg) translateY(-120px);
 }
