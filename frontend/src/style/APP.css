@@ -1,0 +1,38 @@
+/* App.css */
+
+.app-container {
+  /* 讓容器至少有整個螢幕的高度，並使用 flex 垂直排列 */
+  @apply min-h-screen flex flex-col items-center font-sans;
+}
+
+.roulette-placeholder {
+  /* 圓形設定與基本排版 */
+  @apply w-72 h-72 rounded-full flex items-center justify-center relative;
+  /* 實作插畫風的硬陰影 (不帶模糊的純色陰影) */
+  box-shadow: 6px 6px 0px 0px rgba(31, 41, 55, 1); /* 對應 Tailwind 的 gray-800 */
+}
+
+.spin-btn {
+  /* 按鈕硬陰影與過渡動畫時間設定 */
+  box-shadow: 4px 4px 0px 0px rgba(31, 41, 55, 1);
+  transition: all 0.1s ease-in-out;
+}
+
+.spin-btn:active {
+  /* 點擊時按鈕往下沉，並消除陰影，製造真實按壓的物理回饋感 */
+  transform: translate(4px, 4px);
+  box-shadow: 0px 0px 0px 0px rgba(31, 41, 55, 1);
+}
+
+.bottom-icon-btn {
+  /* 底部圖示的大小與懸停動畫 */
+  @apply text-4xl transition-transform duration-200;
+}
+
+.bottom-icon-btn:hover {
+  @apply scale-110;
+}
+
+.bottom-icon-btn:active {
+  @apply scale-95;
+}

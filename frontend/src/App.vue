@@ -1,30 +1,36 @@
-<script setup lang="ts">
-import HelloWorld from './components/HelloWorld.vue'
-</script>
-
 <template>
-  <div>
-    <a href="https://vite.dev" target="_blank">
-      <img src="/vite.svg" class="logo" alt="Vite logo" />
-    </a>
-    <a href="https://vuejs.org/" target="_blank">
-      <img src="./assets/vue.svg" class="logo vue" alt="Vue logo" />
-    </a>
+  <div class="app-container bg-bento-bg">
+    
+    <header class="pt-16 pb-8 text-center">
+      <h1 class="text-5xl font-bold text-gray-800 tracking-widest">食來運轉</h1>
+    </header>
+
+    <main class="flex-1 flex flex-col items-center justify-center w-full px-4">
+      
+      <div class="roulette-placeholder border-4 border-gray-800 bg-white">
+        <span class="text-gray-400 font-bold text-xl">輪盤預留區</span>
+      </div>
+
+      <button class="spin-btn bg-bento-accent text-white text-3xl font-bold mt-16 py-4 px-12 rounded-xl">
+        轉運！
+      </button>
+
+    </main>
+
+    <footer class="pb-12 pt-6 flex justify-center gap-16 w-full">
+      <button class="bottom-icon-btn text-bento-secondary">
+        <i class="fa-solid fa-filter"></i>
+      </button>
+      <button class="bottom-icon-btn text-bento-primary">
+        <i class="fa-solid fa-map-location-dot"></i>
+      </button>
+    </footer>
+
   </div>
-  <HelloWorld msg="Vite + Vue" />
 </template>
 
-<style scoped>
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.vue:hover {
-  filter: drop-shadow(0 0 2em #42b883aa);
-}
-</style>
+<script setup lang="ts">
+
+</script>
+
+<style src="./style/App.css" scoped></style>
