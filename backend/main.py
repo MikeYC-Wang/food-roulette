@@ -38,7 +38,10 @@ class Base(DeclarativeBase):
 # 定義餐廳資料表模型
 class Restaurant(Base):
     __tablename__ = "restaurants"
+    
     id: Mapped[int] = mapped_column(primary_key=True)
+    # 新增 google_place_id 並設定為唯一值
+    google_place_id: Mapped[Optional[str]] = mapped_column(unique=True, index=True)
     name: Mapped[str] = mapped_column()
     type: Mapped[str] = mapped_column()
     rating: Mapped[float] = mapped_column()
