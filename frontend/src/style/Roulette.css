@@ -1,50 +1,48 @@
 .roulette-wrapper {
   @apply relative flex justify-center items-center;
-  width: 300px;
-  height: 300px;
+  width: 380px;
+  height: 380px;
+  max-width: 90vw; 
+  max-height: 90vw;
 }
 
-/* 指針設定 */
 .pointer {
   @apply absolute z-10 text-5xl;
   top: -20px;
-  /* 讓箭頭朝下 */
   transform: rotate(135deg); 
-  /* 替指針加上一點陰影增加立體感 */
   filter: drop-shadow(2px 2px 0px rgba(31, 41, 55, 1));
 }
 
-/* 轉盤本體與底色切分 */
-.wheel {
+/* 靜止的外殼：帶有邊框與陰影，並加上 overflow-hidden 裁切內部 */
+.wheel-container {
   @apply w-full h-full rounded-full relative overflow-hidden;
   box-shadow: 6px 6px 0px 0px rgba(31, 41, 55, 1);
-  
-  /* 使用 conic-gradient 切出 6 等份 (每份 60 度)，交替使用主題色 */
+}
+
+/* 會旋轉的內層：只處理圓餅圖底色 */
+.wheel-spin-area {
+  @apply w-full h-full rounded-full relative;
   background: conic-gradient(
-    #E9C46A 0deg 60deg,      /* 炸排骨黃 */
-    #2A9D8F 60deg 120deg,    /* 燙青菜綠 */
-    #F4F1DE 120deg 180deg,   /* 暖白 */
-    #E9C46A 180deg 240deg,   /* 炸排骨黃 */
-    #2A9D8F 240deg 300deg,   /* 燙青菜綠 */
-    #F4F1DE 300deg 360deg    /* 暖白 */
+    #E9C46A 0deg 60deg,      
+    #2A9D8F 60deg 120deg,    
+    #F4F1DE 120deg 180deg,   
+    #E9C46A 180deg 240deg,   
+    #2A9D8F 240deg 300deg,   
+    #F4F1DE 300deg 360deg    
   );
 }
 
-/* 內容定位層 */
 .wheel-content {
   @apply absolute w-full h-full;
 }
 
-/* 單個選項的容器，負責旋轉角度 */
 .segment-item {
   @apply absolute top-0 left-0 w-full h-full;
 }
 
-/* 文字定位：將文字推到扇形的邊緣，並調整角度對齊切塊中心 */
 .item-text {
-  @apply absolute text-xl tracking-widest;
-  top: 15%;
+  @apply absolute text-2xl tracking-widest;
+  top: 50%;
   left: 50%;
-  /* 向左偏移自身一半，並旋轉 30 度對齊扇形正中間 */
-  transform: translateX(-50%) rotate(30deg);
+  transform: translate(-50%, -50%) rotate(30deg) translateY(-120px);
 }
