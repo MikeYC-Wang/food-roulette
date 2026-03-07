@@ -6,10 +6,15 @@ import random
 
 app = FastAPI()
 
-# 1. 設定 CORS，允許前端 Vite 預設的 5173 連接埠存取
+# 1. 設定 CORS，允許前端 Vite 預設的 5174 連接埠存取
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173"],
+    allow_origins=[
+        "http://localhost:5173",
+        "http://localhost:5174",
+        "http://127.0.0.1:5173",
+        "http://127.0.0.1:5174",  
+    ],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

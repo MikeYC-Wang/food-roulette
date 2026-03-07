@@ -114,7 +114,7 @@ const triggerSpin = async () => {
     showResult.value = false;
 
     // 向 FastAPI 後端發送 POST 請求
-    const response = await axios.post('http://localhost:8000/api/spin', {
+    const response = await axios.post('http://127.0.0.1:8001/api/spin', {
       lat: location.value.lat,
       lng: location.value.lng,
       distance: currentFilters.value.distance,
