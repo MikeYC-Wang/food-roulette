@@ -13,11 +13,11 @@ DATABASE_URL = os.getenv("DATABASE_URL")
 PLACES_URL = "https://places.googleapis.com/v1/places:searchNearby"
 
 async def fetch_restaurants_from_google(lat, lng, radius=1000.0):
-    # 關鍵：X-Goog-FieldMask。這決定了回傳哪些欄位以及計費等級
+    # 關鍵：X-Goog-FieldMask 新增了 places.priceLevel
     headers = {
         "Content-Type": "application/json",
         "X-Goog-Api-Key": API_KEY,
-        "X-Goog-FieldMask": "places.id,places.displayName,places.rating,places.location,places.types"
+        "X-Goog-FieldMask": "places.id,places.displayName,places.rating,places.location,places.types,places.priceLevel"
     }
 
     # 搜尋條件：指定餐廳、範圍與地點
@@ -58,16 +58,22 @@ async def main():
             loc = p.get("location", {})
             p_lat, p_lng = loc.get("latitude"), loc.get("longitude")
             
+            # 取得價位資料 (若無則預設為 None)
+            price_level = p.get("priceLevel")
+            
             # 取得主類別
             p_types = p.get("types", ["restaurant"])
             p_type = p_types[0] if p_types else "restaurant"
 
-            # 插入資料庫：使用 google_place_id 作為唯一索引防止重複
+            # 插入資料庫：更新 SQL 加入 price_level
             sql = text("""
-                INSERT INTO restaurants (google_place_id, name, type, rating, geom)
-                VALUES (:place_id, :name, :type, :rating, ST_SetSRID(ST_MakePoint(:lng, :lat), 4326))
+                INSERT INTO restaurants (google_place_id, name, type, rating, price_level, geom)
+                VALUES (:place_id, :name, :type, :rating, :price_level, ST_SetSRID(ST_MakePoint(:lng, :lat), 4326))
                 ON CONFLICT (google_place_id) 
-                DO UPDATE SET rating = EXCLUDED.rating, name = EXCLUDED.name;
+                DO UPDATE SET 
+                    rating = EXCLUDED.rating, 
+                    name = EXCLUDED.name,
+                    price_level = EXCLUDED.price_level;
             """)
             
             await conn.execute(sql, {
@@ -75,10 +81,11 @@ async def main():
                 "name": name,
                 "type": p_type,
                 "rating": rating,
+                "price_level": price_level, # 傳入價位參數
                 "lng": p_lng,
                 "lat": p_lat
             })
-            print(f"✅ 已匯入：{name} ({rating}星)")
+            print(f"✅ 已匯入：{name} ({rating}星, 價位: {price_level})")
 
     print(f"\n🎉 同步完成！共匯入 {len(places)} 筆真實餐廳。")
     await engine.dispose()

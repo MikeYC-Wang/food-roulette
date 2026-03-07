@@ -33,6 +33,23 @@
           </div>
 
           <div class="filter-group">
+            <h3 class="text-lg font-bold text-gray-700 mb-3">
+              <i class="fa-solid fa-sack-dollar mr-2 text-green-600"></i>價位區間
+            </h3>
+            <div class="flex flex-wrap gap-2">
+              <button 
+                v-for="price in priceLevels" 
+                :key="price.value"
+                @click="toggleSelection(selectedPrices, price.value)"
+                class="filter-chip px-3 py-2 text-sm font-bold rounded-lg border-2 border-gray-800 transition-all"
+                :class="selectedPrices.includes(price.value) ? 'bg-green-600 text-white chip-active border-green-700' : 'bg-white text-gray-600 chip-inactive'"
+              >
+                {{ price.label }}
+              </button>
+            </div>
+          </div>
+
+          <div class="filter-group">
             <h3 class="text-lg font-bold text-gray-700 mb-3"><i class="fa-solid fa-utensils mr-2"></i>想吃什麼</h3>
             <div class="flex flex-wrap gap-3">
               <button 
@@ -77,29 +94,34 @@
 <script setup lang="ts">
 import { ref } from 'vue';
 
-// 定義 Props (接收外部控制開啟/關閉的狀態)
 defineProps<{
   isOpen: boolean;
 }>();
 
-// 定義 Emit (向外傳遞事件)
 const emit = defineEmits(['update:isOpen', 'apply']);
 
-// 選項資料預設值
 const distances = [
   { label: '500m', value: 500 },
   { label: '1km', value: 1000 },
   { label: '2km', value: 2000 }
 ];
+
+// 定義 4 個完整的價位等級
+const priceLevels = [
+  { label: '💰 平價', value: 'PRICE_LEVEL_INEXPENSIVE' },
+  { label: '💰💰 中等', value: 'PRICE_LEVEL_MODERATE' },
+  { label: '💰💰💰 稍貴', value: 'PRICE_LEVEL_EXPENSIVE' },
+  { label: '💰💰💰💰 高級', value: 'PRICE_LEVEL_VERY_EXPENSIVE' }
+];
+
 const foodTypes = ['麵食', '便當', '健康餐', '小吃', '異國料理', '速食'];
 const avoidList = ['不吃辣', '不要香菜', '排除連鎖店'];
 
-// 使用者的選擇狀態
 const selectedDistance = ref(500);
 const selectedTypes = ref<string[]>([]);
 const selectedAvoids = ref<string[]>([]);
+const selectedPrices = ref<string[]>([]);
 
-// 切換複選按鈕的邏輯
 const toggleSelection = (list: string[], item: string) => {
   const index = list.indexOf(item);
   if (index === -1) {
@@ -109,17 +131,16 @@ const toggleSelection = (list: string[], item: string) => {
   }
 };
 
-// 關閉抽屜
 const closeDrawer = () => {
   emit('update:isOpen', false);
 };
 
-// 點擊套用
 const applyFilters = () => {
   emit('apply', {
     distance: selectedDistance.value,
     types: selectedTypes.value,
-    avoids: selectedAvoids.value
+    avoids: selectedAvoids.value,
+    priceLevels: selectedPrices.value
   });
   closeDrawer();
 };

@@ -15,10 +15,8 @@ from geoalchemy2.functions import ST_MakePoint, ST_SetSRID
 # 載入 .env 環境變數
 load_dotenv()
 
-# 資料庫連線設定 (優先從環境變數讀取)
+# 資料庫連線設定
 DATABASE_URL = os.getenv("DATABASE_URL")
-
-# 如果 DATABASE_URL 未在 .env 定義，則手動組裝
 if not DATABASE_URL:
     db_user = os.getenv("DB_USER", "postgres")
     db_password = os.getenv("DB_PASSWORD", "")
@@ -31,7 +29,6 @@ if not DATABASE_URL:
 engine = create_async_engine(DATABASE_URL, echo=True)
 AsyncSessionLocal = async_sessionmaker(engine, expire_on_commit=False)
 
-# SQLAlchemy 模型基底
 class Base(DeclarativeBase):
     pass
 
@@ -40,22 +37,20 @@ class Restaurant(Base):
     __tablename__ = "restaurants"
     
     id: Mapped[int] = mapped_column(primary_key=True)
-    # 新增 google_place_id 並設定為唯一值
     google_place_id: Mapped[Optional[str]] = mapped_column(unique=True, index=True)
     name: Mapped[str] = mapped_column()
     type: Mapped[str] = mapped_column()
     rating: Mapped[float] = mapped_column()
-    # 使用 Geometry 型別存放經緯度點位 (SRID 4326)
+    # 👉 新增 price_level 欄位
+    price_level: Mapped[Optional[str]] = mapped_column()
     geom: Mapped[any] = mapped_column(Geometry("POINT", srid=4326))
 
-# 相依注入：取得資料庫連線
 async def get_db():
     async with AsyncSessionLocal() as session:
         yield session
 
 app = FastAPI(title="食來運轉 API")
 
-# 設定 CORS 允許前端存取 (包含 5173 與 5174)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
@@ -69,27 +64,24 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 定義前端請求的資料結構
+# 👉 定義前端請求的資料結構，加入 priceLevels
 class SpinRequest(BaseModel):
     lat: float
     lng: float
     distance: int
     types: List[str]
     avoids: List[str]
+    priceLevels: List[str] = [] # 預設為空陣列
 
 @app.get("/")
 async def root():
     return {"message": "食來運轉後端 (PostGIS 版) 正常運作中！"}
 
-# 核心介面：抽籤邏輯
 @app.post("/api/spin")
 async def get_roulette_data(req: SpinRequest, db: AsyncSession = Depends(get_db)):
     try:
-        # 1. 建立使用者目前座標點
         user_point = ST_SetSRID(ST_MakePoint(req.lng, req.lat), 4326)
 
-        # 2. 建立空間查詢
-        # 將 geometry 轉型為 geography，ST_DWithin 就會自動以「公尺」為單位
         from sqlalchemy import cast
         from geoalchemy2 import Geography
 
@@ -97,44 +89,45 @@ async def get_roulette_data(req: SpinRequest, db: AsyncSession = Depends(get_db)
             func.ST_DWithin(
                 cast(Restaurant.geom, Geography),
                 cast(user_point, Geography),
-                float(req.distance)  # 直接傳入公尺數，例如 500
+                float(req.distance)
             )
         )
 
-        # 3. 套用類型篩選 (複選)
+        # 類型篩選
         if req.types and len(req.types) > 0:
             query = query.where(Restaurant.type.in_(req.types))
+            
+        # 價位篩選
+        if req.priceLevels and len(req.priceLevels) > 0:
+            query = query.where(Restaurant.price_level.in_(req.priceLevels))
 
-        # 4. 套用避雷篩選
+        # 避雷篩選
         for avoid in req.avoids:
             if avoid == "不吃辣":
                 query = query.where(~Restaurant.name.contains("辣"))
             elif avoid == "排除連鎖店":
-                # 排除常見連鎖關鍵字 (範例)
                 chains = ["麥當勞", "肯德基", "必勝客", "摩斯漢堡"]
                 for chain in chains:
                     query = query.where(~Restaurant.name.contains(chain))
 
-        # 執行查詢
         db_result = await db.execute(query)
         restaurants = db_result.scalars().all()
 
-        # 格式化輸出
+        # 格式化輸出，加入 priceLevel 回傳給前端
         formatted_list = [
             {
-                "id": r.google_place_id, # 補上 ID，方便前端做 Google Maps 連結
+                "id": r.google_place_id,
                 "name": r.name, 
                 "type": r.type, 
-                "rating": float(r.rating)
+                "rating": float(r.rating),
+                "priceLevel": r.price_level
             } 
             for r in restaurants
         ]
 
-        # 如果找不到符合條件的餐廳，回傳預設項目避免輪盤空白
         if not formatted_list:
             formatted_list = [{"name": "附近沒找到美食", "type": "N/A", "rating": 0}]
 
-        # 5. 從結果中隨機挑選最多 6 個
         sample_size = min(len(formatted_list), 6)
         final_selection = random.sample(formatted_list, sample_size) if formatted_list else []
 
@@ -149,5 +142,4 @@ async def get_roulette_data(req: SpinRequest, db: AsyncSession = Depends(get_db)
 
 if __name__ == "__main__":
     import uvicorn
-    # 固定使用 8001 埠號啟動
     uvicorn.run(app, host="127.0.0.1", port=8001)

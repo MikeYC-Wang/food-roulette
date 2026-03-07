@@ -46,12 +46,18 @@
             {{ selectedFood?.name }}
           </h2>
           
-          <div class="flex items-center justify-center space-x-3 text-sm mb-6">
+          <div class="flex items-center justify-center space-x-3 text-sm mb-3">
             <span class="bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full font-bold flex items-center shadow-sm">
               <i class="fa-solid fa-star mr-1"></i> {{ selectedFood?.rating || '無評分' }}
             </span>
             <span class="bg-gray-100 text-gray-600 px-3 py-1 rounded-full font-medium shadow-sm capitalize">
               {{ formatType(selectedFood?.type) }}
+            </span>
+          </div>
+
+          <div class="flex items-center justify-center text-sm mb-6">
+            <span class="text-green-700 font-bold bg-green-50 px-4 py-1.5 rounded-full shadow-sm border border-green-100">
+              {{ formatPrice(selectedFood?.priceLevel) }}
             </span>
           </div>
         </div>
@@ -90,37 +96,26 @@ import { ref, onMounted, computed, watch } from 'vue';
 import axios from 'axios';
 import Roulette from './components/Roulette.vue';
 import FilterDrawer from './components/FilterDrawer.vue';
-import { useLocation } from './composables/useLocation'; // 引入定位邏輯
+import { useLocation } from './composables/useLocation';
 
-// 定義完整的餐廳資料型別
 interface RestaurantInfo {
   id?: string;
   name: string;
   type?: string;
   rating?: number;
+  priceLevel?: string;
 }
 
-// 定位功能
-const { location, getLocation } = useLocation();
+const formatPrice = (level?: string) => {
+  const priceMap: Record<string, string> = {
+    'PRICE_LEVEL_INEXPENSIVE': '💰 平價 ($)',
+    'PRICE_LEVEL_MODERATE': '💰💰 中等 ($$)',
+    'PRICE_LEVEL_EXPENSIVE': '💰💰💰 稍貴 ($$$)',
+    'PRICE_LEVEL_VERY_EXPENSIVE': '💰💰💰💰 高級 ($$$$)',
+  };
+  return level ? (priceMap[level] || '未知價位') : '未知價位';
+};
 
-// 取得 Roulette 元件的參考，用於呼叫其內部方法
-const rouletteRef = ref<InstanceType<typeof Roulette> | null>(null);
-
-// 狀態管理
-const isSpinning = ref(false);
-const showResult = ref(false);
-// 更新：使用 RestaurantInfo 型別替換原本的簡單 string
-const selectedFood = ref<RestaurantInfo | null>(null);
-const isFilterOpen = ref(false);
-
-// 儲存目前套用的篩選條件 (預設值)
-const currentFilters = ref({
-  distance: 500,
-  types: [] as string[],
-  avoids: [] as string[]
-});
-
-// 新增：將 Google 傳回的英文類型翻譯成中文的輔助函式
 const formatType = (type?: string) => {
   const typeMap: Record<string, string> = {
     restaurant: '餐廳',
@@ -131,11 +126,24 @@ const formatType = (type?: string) => {
     meal_takeaway: '外帶',
     meal_delivery: '外送'
   };
-  // 找不到對應翻譯時，預設顯示原本的字或「美食」
   return type ? (typeMap[type] || type) : '美食';
 };
 
-// 根據定位狀態切換 FontAwesome 圖示
+const { location, getLocation } = useLocation();
+const rouletteRef = ref<InstanceType<typeof Roulette> | null>(null);
+
+const isSpinning = ref(false);
+const showResult = ref(false);
+const selectedFood = ref<RestaurantInfo | null>(null);
+const isFilterOpen = ref(false);
+
+const currentFilters = ref({
+  distance: 500,
+  types: [] as string[],
+  avoids: [] as string[],
+  priceLevels: [] as string[] 
+});
+
 const statusIconClass = computed(() => {
   switch (location.value.status) {
     case 'loading': return 'fa-solid fa-circle-notch fa-spin text-gray-400';
@@ -146,9 +154,6 @@ const statusIconClass = computed(() => {
   }
 });
 
-/**
- * 向後端抓取餐廳名單並更新轉盤選項
- */
 const fetchRestaurants = async () => {
   try {
     const response = await axios.post('http://127.0.0.1:8001/api/spin', {
@@ -156,11 +161,11 @@ const fetchRestaurants = async () => {
       lng: location.value.lng,
       distance: currentFilters.value.distance,
       types: currentFilters.value.types,
-      avoids: currentFilters.value.avoids
+      avoids: currentFilters.value.avoids,
+      priceLevels: currentFilters.value.priceLevels // 👉 新增：傳送價位參數給後端
     });
 
     if (response.data.status === 'success' && rouletteRef.value) {
-      // 更新輪盤內的餐廳選項
       rouletteRef.value.setOptions(response.data.results);
     }
   } catch (error) {
@@ -168,52 +173,37 @@ const fetchRestaurants = async () => {
   }
 };
 
-/**
- * 監聽定位狀態：一旦定位成功或進入預設狀態，立刻抓取餐廳資料
- * 這樣使用者一進來就能看到名單，不用等到按下轉運按鈕
- */
 watch(() => location.value.status, (newStatus) => {
   if (newStatus === 'success' || newStatus === 'default') {
     fetchRestaurants();
   }
 }, { immediate: true });
 
-// 頁面掛載時自動獲取定位
 onMounted(() => {
   getLocation();
 });
 
-// 接收來自篩選抽屜的條件並更新狀態
 const handleApplyFilters = async (filters: any) => {
   currentFilters.value = filters;
-  console.log('篩選條件已更新:', currentFilters.value);
-  // 條件更新後，立即重新抓取名單讓轉盤同步更新
   await fetchRestaurants();
 };
 
-// 觸發旋轉：啟動輪盤動畫
 const triggerSpin = async () => {
   if (isSpinning.value || !rouletteRef.value) return;
   
   isSpinning.value = true;
   showResult.value = false;
 
-  // 旋轉前再次確保名單是最新的
   await fetchRestaurants();
-  
-  // 呼叫輪盤開始旋轉動畫
   rouletteRef.value.spin();
 };
 
-// 輪盤旋轉結束後的處理邏輯
-// 更新：將 result 型別改為 RestaurantInfo
 const handleSpinEnd = (result: RestaurantInfo) => {
   isSpinning.value = false;
   selectedFood.value = result;
-  showResult.value = true; // 顯示結果彈窗
+  showResult.value = true;
 };
 
-// 關閉結果卡片
 const closeResult = () => {
   showResult.value = false;
 };
