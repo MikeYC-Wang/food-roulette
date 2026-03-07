@@ -21,7 +21,7 @@
     </main>
 
     <footer class="pb-12 pt-6 flex justify-center gap-16 w-full">
-      <button class="bottom-icon-btn text-bento-secondary">
+      <button @click="isFilterOpen = true" class="bottom-icon-btn text-bento-secondary">
         <i class="fa-solid fa-filter"></i>
       </button>
       <button class="bottom-icon-btn text-bento-primary">
@@ -44,13 +44,17 @@
         </button>
       </div>
     </div>
-
+    <FilterDrawer 
+      v-model:isOpen="isFilterOpen" 
+      @apply="handleApplyFilters"
+    />
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref } from 'vue';
 import Roulette from './components/Roulette.vue';
+import FilterDrawer from './components/FilterDrawer.vue';
 
 // 取得 Roulette 元件的參考
 const rouletteRef = ref<InstanceType<typeof Roulette> | null>(null);
@@ -79,6 +83,15 @@ const handleSpinEnd = (result: { name: string }) => {
 // 關閉結果卡片
 const closeResult = () => {
   showResult.value = false;
+};
+
+// 控制篩選抽屜的開關狀態
+const isFilterOpen = ref(false);
+
+// 接收來自篩選抽屜的條件
+const handleApplyFilters = (filters: any) => {
+  console.log('套用的篩選條件:', filters);
+  // 未來這裡會把條件存起來，並在準備抽獎時一起發送給後端 API
 };
 </script>
 
