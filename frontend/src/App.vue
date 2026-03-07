@@ -7,9 +7,7 @@
 
     <main class="flex-1 flex flex-col items-center justify-center w-full px-4">
       
-      <div class="roulette-placeholder border-4 border-gray-800 bg-white">
-        <span class="text-gray-400 font-bold text-xl">輪盤預留區</span>
-      </div>
+    <Roulette />
 
       <button class="spin-btn bg-bento-accent text-white text-3xl font-bold mt-16 py-4 px-12 rounded-xl">
         轉運！
@@ -30,7 +28,7 @@
 </template>
 
 <script setup lang="ts">
-
+import Roulette from './components/Roulette.vue';
 </script>
 
 <style src="./style/App.css" scoped></style>
