@@ -58,14 +58,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue';
+import { ref, onMounted, computed, watch } from 'vue';
 import axios from 'axios';
 import Roulette from './components/Roulette.vue';
 import FilterDrawer from './components/FilterDrawer.vue';
 import { useLocation } from './composables/useLocation'; // 引入定位邏輯
 
 // 定位功能
-const { location, getLocation } = useLocation();
+const { location, getLocation } = useLocation(); //
 
 // 取得 Roulette 元件的參考，用於呼叫其內部方法
 const rouletteRef = ref<InstanceType<typeof Roulette> | null>(null);
@@ -94,26 +94,12 @@ const statusIconClass = computed(() => {
   }
 });
 
-// 頁面掛載時自動獲取定位
-onMounted(() => {
-  getLocation();
-});
-
-// 接收來自篩選抽屜的條件並更新狀態
-const handleApplyFilters = (filters: any) => {
-  currentFilters.value = filters;
-  console.log('篩選條件已更新:', currentFilters.value);
-};
-
-// 觸發旋轉：先向後端 API 取得餐廳名單，再啟動輪盤動畫
-const triggerSpin = async () => {
-  if (isSpinning.value || !rouletteRef.value) return;
-  
+/**
+ * 向後端抓取餐廳名單並更新轉盤選項
+ */
+const fetchRestaurants = async () => {
   try {
-    isSpinning.value = true;
-    showResult.value = false;
-
-    // 向 FastAPI 後端發送 POST 請求
+    // 使用先前修正過的 8001 埠號
     const response = await axios.post('http://127.0.0.1:8001/api/spin', {
       lat: location.value.lat,
       lng: location.value.lng,
@@ -122,18 +108,50 @@ const triggerSpin = async () => {
       avoids: currentFilters.value.avoids
     });
 
-    if (response.data.status === 'success') {
-      // 1. 更新輪盤內的餐廳選項 (需在 Roulette.vue 實作 setOptions)
+    if (response.data.status === 'success' && rouletteRef.value) {
+      // 更新輪盤內的餐廳選項
       rouletteRef.value.setOptions(response.data.results);
-      
-      // 2. 呼叫輪盤開始旋轉
-      rouletteRef.value.spin();
     }
   } catch (error) {
-    console.error('API 請求失敗:', error);
-    alert('無法與後端連線，請確認 FastAPI 伺服器是否已啟動');
-    isSpinning.value = false;
+    console.error('抓取餐廳名單失敗:', error);
   }
+};
+
+/**
+ * 監聽定位狀態：一旦定位成功或進入預設狀態，立刻抓取餐廳資料
+ * 這樣使用者一進來就能看到名單，不用等到按下轉運按鈕
+ */
+watch(() => location.value.status, (newStatus) => {
+  if (newStatus === 'success' || newStatus === 'default') {
+    fetchRestaurants();
+  }
+}, { immediate: true });
+
+// 頁面掛載時自動獲取定位
+onMounted(() => {
+  getLocation();
+});
+
+// 接收來自篩選抽屜的條件並更新狀態
+const handleApplyFilters = async (filters: any) => {
+  currentFilters.value = filters;
+  console.log('篩選條件已更新:', currentFilters.value);
+  // 條件更新後，立即重新抓取名單讓轉盤同步更新
+  await fetchRestaurants();
+};
+
+// 觸發旋轉：啟動輪盤動畫
+const triggerSpin = async () => {
+  if (isSpinning.value || !rouletteRef.value) return;
+  
+  isSpinning.value = true;
+  showResult.value = false;
+
+  // 旋轉前再次確保名單是最新的
+  await fetchRestaurants();
+  
+  // 呼叫輪盤開始旋轉動畫
+  rouletteRef.value.spin();
 };
 
 // 輪盤旋轉結束後的處理邏輯

@@ -18,10 +18,10 @@
             :style="{ transform: `rotate(${index * segmentDegree}deg)` }"
           >
             <div 
-              class="item-text text-gray-800 font-bold"
-              :style="{ 
-                transform: `translate(-50%, -50%) rotate(${segmentDegree / 2}deg) translateY(-120px)` 
-              }"
+            class="item-text text-gray-800 font-bold"
+            :style="{ 
+                transform: `translate(-50%, -50%) rotate(${options.length === 1 ? 0 : segmentDegree / 2}deg) translateY(-120px)` 
+            }"
             >
               {{ item.name }}
             </div>
