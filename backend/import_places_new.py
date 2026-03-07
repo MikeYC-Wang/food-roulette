@@ -71,6 +71,7 @@ async def sync_to_db():
             """)
             
             await conn.execute(sql, {
+                "place_id": p.get("id"),
                 "name": name,
                 "type": main_type,
                 "rating": rating,
