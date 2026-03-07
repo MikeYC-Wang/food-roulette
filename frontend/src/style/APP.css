@@ -36,3 +36,8 @@
 .bottom-icon-btn:active {
   @apply scale-95;
 }
+
+.location-status {
+  @apply bg-white/50 px-4 py-1.5 rounded-full inline-flex border-2 border-gray-800;
+  box-shadow: 2px 2px 0px 0px rgba(31, 41, 55, 1);
+}
