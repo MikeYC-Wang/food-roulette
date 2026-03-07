@@ -1,0 +1,12 @@
+# 前端忽略清單
+frontend/node_modules/
+frontend/dist/
+frontend/.env
+
+# 後端忽略清單
+backend/venv/
+backend/__pycache__/
+*.pyc
+
+# 系統忽略清單
+.DS_Store
