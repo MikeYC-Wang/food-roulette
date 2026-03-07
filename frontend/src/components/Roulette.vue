@@ -18,10 +18,12 @@
             :style="{ transform: `rotate(${index * segmentDegree}deg)` }"
           >
             <div 
-            class="item-text text-gray-800 font-bold"
-            :style="{ 
-                transform: `translate(-50%, -50%) rotate(${options.length === 1 ? 0 : segmentDegree / 2}deg) translateY(-120px)` 
-            }"
+              class="item-text text-gray-800 font-bold"
+              :style="{ 
+                /* 配合 480px 轉盤，將位移調整至 -150px 讓文字分佈更均勻 */
+                transform: `translate(-50%, -50%) rotate(${options.length === 1 ? 0 : segmentDegree / 2}deg) translateY(-150px)`,
+                fontSize: '18px'
+              }"
             >
               {{ item.name }}
             </div>
@@ -50,7 +52,7 @@ const emit = defineEmits<{
   (e: 'spin-end', result: RouletteOption): void
 }>();
 
-// 1. 動態計算每一格的角度 (例如：3筆=120度, 6筆=60度)
+// 1. 動態計算每一格的角度
 const segmentDegree = computed(() => {
   const count = options.value.length;
   return count > 0 ? 360 / count : 360;
@@ -61,13 +63,12 @@ const wheelStyle = computed(() => {
   const colors = ['#E9C46A', '#2A9D8F', '#F4F1DE', '#E76F51', '#A8DADC', '#F1FAEE'];
   const count = options.value.length;
   
-  // 使用 CSS conic-gradient 生成動態圓餅圖背景
   let gradientStr = '';
   if (count <= 1) {
     gradientStr = colors[0]!;
   } else {
     const steps = options.value.map((_, i) => {
-      const color = colors[i % colors.length];
+      const color = colors[i % colors.length]!;
       const start = i * segmentDegree.value;
       const end = (i + 1) * segmentDegree.value;
       return `${color} ${start}deg ${end}deg`;
@@ -86,7 +87,6 @@ const wheelStyle = computed(() => {
  * 外部呼叫：設定新的餐廳清單
  */
 const setOptions = (newOptions: RouletteOption[]) => {
-  // 限制最多 6 筆，若無資料則顯示預設
   if (newOptions && newOptions.length > 0) {
     options.value = newOptions.slice(0, 6);
   } else {
@@ -102,30 +102,23 @@ const spin = () => {
   isSpinning.value = true;
 
   const count = options.value.length;
-  // 隨機決定落點索引
   const prizeIndex = Math.floor(Math.random() * count);
   
-  // 3. 解決累積誤差：計算目前旋轉量，並歸零基準點到下一個 360 度
   const currentRotation = wheelRotation.value;
   const baseRotation = Math.ceil(currentRotation / 360) * 360;
   
-  // 4. 計算隨機偏移 (讓指針停在扇形中心附近的隨機位置)
   const randomOffset = Math.floor(Math.random() * (segmentDegree.value * 0.6)) - (segmentDegree.value * 0.3);
   
-  // 5. 計算總旋轉角度：歸零起點 + 旋轉 5 圈 + 目標格偏移量 + 置中修正 + 隨機偏移
   const targetDegree = baseRotation + 1800 + (360 - (prizeIndex * segmentDegree.value)) - (segmentDegree.value / 2) + randomOffset;
 
   wheelRotation.value = targetDegree;
 
-  // 4秒動畫結束後發送結果
   setTimeout(() => {
     isSpinning.value = false;
-    // 使用 ! 斷言確保 TS 忽略 prizeIndex 可能越界的警告 (邏輯上已保證在範圍內)
     emit('spin-end', options.value[prizeIndex]!);
   }, 4000);
 };
 
-// 暴露 API 給父元件 (App.vue)
 defineExpose({ spin, setOptions });
 </script>
 
