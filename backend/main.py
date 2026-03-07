@@ -121,7 +121,12 @@ async def get_roulette_data(req: SpinRequest, db: AsyncSession = Depends(get_db)
 
         # 格式化輸出
         formatted_list = [
-            {"name": r.name, "type": r.type, "rating": float(r.rating)} 
+            {
+                "id": r.google_place_id, # 補上 ID，方便前端做 Google Maps 連結
+                "name": r.name, 
+                "type": r.type, 
+                "rating": float(r.rating)
+            } 
             for r in restaurants
         ]
 

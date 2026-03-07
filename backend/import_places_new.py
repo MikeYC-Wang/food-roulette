@@ -7,27 +7,22 @@ from sqlalchemy.ext.asyncio import create_async_engine
 
 load_dotenv()
 
-# 從 .env 讀取設定
 API_KEY = os.getenv("GOOGLE_MAPS_API_KEY")
 DATABASE_URL = os.getenv("DATABASE_URL")
+# 新版 API 的 Nearby Search 端點
+PLACES_URL = "https://places.googleapis.com/v1/places:searchNearby"
 
-# 新版 API 的端點 (Nearby Search)
-ENDPOINT = "https://places.googleapis.com/v1/places:searchNearby"
-
-async def fetch_real_restaurants(lat: float, lng: float, radius: float = 1000.0):
-    """使用 Places API (New) 抓取餐廳"""
-    
-    # 關鍵：FieldMask。新版 API 強制要求此 Header，且這決定了你的費用
-    # 我們只選取基本欄位，確保開發成本最低
+async def fetch_restaurants_from_google(lat, lng, radius=1000.0):
+    # 關鍵：X-Goog-FieldMask。這決定了回傳哪些欄位以及計費等級
     headers = {
         "Content-Type": "application/json",
         "X-Goog-Api-Key": API_KEY,
         "X-Goog-FieldMask": "places.id,places.displayName,places.rating,places.location,places.types"
     }
 
-    # 設定搜尋條件
+    # 搜尋條件：指定餐廳、範圍與地點
     payload = {
-        "includedTypes": ["restaurant"], # 指定餐廳
+        "includedTypes": ["restaurant"],
         "maxResultCount": 20,
         "locationRestriction": {
             "circle": {
@@ -38,50 +33,55 @@ async def fetch_real_restaurants(lat: float, lng: float, radius: float = 1000.0)
     }
 
     async with httpx.AsyncClient() as client:
-        response = await client.post(ENDPOINT, json=payload, headers=headers)
+        response = await client.post(PLACES_URL, json=payload, headers=headers)
         if response.status_code != 200:
-            print(f"API 出錯: {response.text}")
+            print(f"❌ API 請求失敗: {response.text}")
             return []
         
-        data = response.json()
-        return data.get("places", [])
+        return response.json().get("places", [])
 
-async def sync_to_db():
-    # 以南港座標執行測試
-    places = await fetch_real_restaurants(25.0589, 121.6117)
+async def main():
+    # 以南港展覽館附近為例
+    places = await fetch_restaurants_from_google(25.0589, 121.6117)
     
+    if not places:
+        print("查無餐廳資料，請檢查 API Key 是否正確。")
+        return
+
     engine = create_async_engine(DATABASE_URL)
     async with engine.begin() as conn:
         for p in places:
-            # 注意新版的 displayName 是個物件
-            name = p.get("displayName", {}).get("text", "未知店名")
+            # 解析新版 API 格式
+            place_id = p.get("id")
+            name = p.get("displayName", {}).get("text", "未知餐廳")
             rating = p.get("rating", 0.0)
             loc = p.get("location", {})
             p_lat, p_lng = loc.get("latitude"), loc.get("longitude")
             
             # 取得主類別
-            types = p.get("types", ["restaurant"])
-            main_type = types[0] if types else "restaurant"
+            p_types = p.get("types", ["restaurant"])
+            p_type = p_types[0] if p_types else "restaurant"
 
-            # 插入或更新
+            # 插入資料庫：使用 google_place_id 作為唯一索引防止重複
             sql = text("""
-                INSERT INTO restaurants (name, type, rating, geom)
-                VALUES (:name, :type, :rating, ST_SetSRID(ST_MakePoint(:lng, :lat), 4326))
-                ON CONFLICT (name) DO UPDATE SET rating = EXCLUDED.rating;
+                INSERT INTO restaurants (google_place_id, name, type, rating, geom)
+                VALUES (:place_id, :name, :type, :rating, ST_SetSRID(ST_MakePoint(:lng, :lat), 4326))
+                ON CONFLICT (google_place_id) 
+                DO UPDATE SET rating = EXCLUDED.rating, name = EXCLUDED.name;
             """)
             
             await conn.execute(sql, {
-                "place_id": p.get("id"),
+                "place_id": place_id,
                 "name": name,
-                "type": main_type,
+                "type": p_type,
                 "rating": rating,
                 "lng": p_lng,
                 "lat": p_lat
             })
-            print(f"✅ 已存入: {name}")
+            print(f"✅ 已匯入：{name} ({rating}星)")
 
-    print("--- 真實資料同步完成 ---")
+    print(f"\n🎉 同步完成！共匯入 {len(places)} 筆真實餐廳。")
     await engine.dispose()
 
 if __name__ == "__main__":
-    asyncio.run(sync_to_db())
+    asyncio.run(main())

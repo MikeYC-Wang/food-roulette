@@ -34,19 +34,47 @@
       </button>
     </footer>
 
-    <div 
-      v-if="showResult" 
-      class="absolute inset-0 bg-black/40 flex items-center justify-center z-50 backdrop-blur-sm"
-    >
-      <div class="bg-bento-bg border-4 border-gray-800 p-8 rounded-2xl text-center shadow-[8px_8px_0px_0px_rgba(31,41,55,1)] max-w-sm w-[90%] transform transition-all">
-        <h2 class="text-2xl text-gray-600 font-bold mb-2">上天決定讓你吃</h2>
-        <p class="text-5xl font-bold text-bento-accent tracking-widest mb-8 mt-4">{{ selectedFood?.name }}</p>
-        <button 
-          @click="closeResult"
-          class="spin-btn w-full bg-bento-secondary text-white text-2xl font-bold py-3 rounded-xl"
-        >
-          太棒了！
-        </button>
+    <div v-if="showResult" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 backdrop-blur-sm transition-opacity">
+      <div class="bg-white w-11/12 max-w-sm rounded-3xl p-6 shadow-2xl transform transition-all border border-gray-100">
+        
+        <div class="w-20 h-20 mx-auto bg-bento-primary rounded-full flex items-center justify-center -mt-16 mb-4 shadow-lg border-4 border-white">
+          <i class="fa-solid fa-utensils text-4xl text-white"></i>
+        </div>
+
+        <div class="text-center">
+          <h2 class="text-2xl font-black text-gray-800 mb-2 leading-tight">
+            {{ selectedFood?.name }}
+          </h2>
+          
+          <div class="flex items-center justify-center space-x-3 text-sm mb-6">
+            <span class="bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full font-bold flex items-center shadow-sm">
+              <i class="fa-solid fa-star mr-1"></i> {{ selectedFood?.rating || '無評分' }}
+            </span>
+            <span class="bg-gray-100 text-gray-600 px-3 py-1 rounded-full font-medium shadow-sm capitalize">
+              {{ formatType(selectedFood?.type) }}
+            </span>
+          </div>
+        </div>
+
+        <div class="flex flex-col space-y-3 mt-2">
+          <a 
+            v-if="selectedFood?.id"
+            :href="`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedFood.name)}&query_place_id=${selectedFood.id}`"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="w-full bg-bento-primary text-white font-bold py-3 px-6 rounded-xl hover:bg-opacity-90 transition-all flex items-center justify-center shadow-md"
+          >
+            <i class="fa-solid fa-map-location-dot mr-2"></i> 帶我去吃！
+          </a>
+          
+          <button 
+            @click="closeResult"
+            class="w-full bg-gray-100 text-gray-700 font-bold py-3 px-6 rounded-xl hover:bg-gray-200 transition-all flex items-center justify-center"
+          >
+            <i class="fa-solid fa-rotate-right mr-2"></i> 再轉一次
+          </button>
+        </div>
+
       </div>
     </div>
 
@@ -64,8 +92,16 @@ import Roulette from './components/Roulette.vue';
 import FilterDrawer from './components/FilterDrawer.vue';
 import { useLocation } from './composables/useLocation'; // 引入定位邏輯
 
+// 定義完整的餐廳資料型別
+interface RestaurantInfo {
+  id?: string;
+  name: string;
+  type?: string;
+  rating?: number;
+}
+
 // 定位功能
-const { location, getLocation } = useLocation(); //
+const { location, getLocation } = useLocation();
 
 // 取得 Roulette 元件的參考，用於呼叫其內部方法
 const rouletteRef = ref<InstanceType<typeof Roulette> | null>(null);
@@ -73,7 +109,8 @@ const rouletteRef = ref<InstanceType<typeof Roulette> | null>(null);
 // 狀態管理
 const isSpinning = ref(false);
 const showResult = ref(false);
-const selectedFood = ref<{ name: string } | null>(null);
+// 更新：使用 RestaurantInfo 型別替換原本的簡單 string
+const selectedFood = ref<RestaurantInfo | null>(null);
 const isFilterOpen = ref(false);
 
 // 儲存目前套用的篩選條件 (預設值)
@@ -82,6 +119,21 @@ const currentFilters = ref({
   types: [] as string[],
   avoids: [] as string[]
 });
+
+// 新增：將 Google 傳回的英文類型翻譯成中文的輔助函式
+const formatType = (type?: string) => {
+  const typeMap: Record<string, string> = {
+    restaurant: '餐廳',
+    cafe: '咖啡廳',
+    bakery: '烘焙坊',
+    bar: '酒吧',
+    fast_food: '速食',
+    meal_takeaway: '外帶',
+    meal_delivery: '外送'
+  };
+  // 找不到對應翻譯時，預設顯示原本的字或「美食」
+  return type ? (typeMap[type] || type) : '美食';
+};
 
 // 根據定位狀態切換 FontAwesome 圖示
 const statusIconClass = computed(() => {
@@ -99,7 +151,6 @@ const statusIconClass = computed(() => {
  */
 const fetchRestaurants = async () => {
   try {
-    // 使用先前修正過的 8001 埠號
     const response = await axios.post('http://127.0.0.1:8001/api/spin', {
       lat: location.value.lat,
       lng: location.value.lng,
@@ -155,7 +206,8 @@ const triggerSpin = async () => {
 };
 
 // 輪盤旋轉結束後的處理邏輯
-const handleSpinEnd = (result: { name: string }) => {
+// 更新：將 result 型別改為 RestaurantInfo
+const handleSpinEnd = (result: RestaurantInfo) => {
   isSpinning.value = false;
   selectedFood.value = result;
   showResult.value = true; // 顯示結果彈窗
