@@ -1,14 +1,29 @@
 <template>
   <div class="app-container bg-bento-bg relative">
-    <header class="pt-16 pb-2 text-center">
-      <h1 class="text-5xl font-bold text-gray-800 tracking-widest">食來運轉</h1>
-      <div class="location-status mt-4 flex items-center justify-center gap-2">
+    <header class="pt-4 text-center flex flex-col items-center z-10 w-full">
+      
+      <h1 class="flex justify-center w-full px-4">
+        <img :src="logoImg" alt="食來運轉" class="h-[13rem] object-contain drop-shadow-sm" />
+      </h1>
+
+      <div class="location-status mt-4 flex items-center justify-center gap-2 relative z-20">
         <i :class="statusIconClass" class="text-lg"></i>
         <span class="text-sm font-bold text-gray-600">{{ location.message }}</span>
       </div>
+
+      <div v-if="location.status !== 'loading'" class="h-40 relative flex items-center justify-center w-full">
+        <Transition name="food-fade">
+          <img 
+            :key="currentFoodIndex"
+            :src="foodImages[currentFoodIndex]" 
+            alt="food indicator"
+            class="floating-food absolute h-56 w-56 object-contain scale-[1.8] pointer-events-none" 
+          />
+        </Transition>
+      </div>
     </header>
 
-    <main class="flex-1 flex flex-col items-center justify-center w-full px-4">
+    <main class="flex-1 flex flex-col items-center justify-start pt-6 w-full px-4 z-20">
       <Roulette ref="rouletteRef" @spin-end="handleSpinEnd" />
       
       <button 
@@ -27,7 +42,6 @@
       >
         <i class="fa-solid fa-hand-pointer mr-2"></i>請先設定篩選條件
       </button>
-
     </main>
 
     <footer class="pb-12 pt-6 flex justify-center gap-16 w-full">
@@ -74,7 +88,7 @@
         </div>
 
         <div class="flex flex-col space-y-3 mt-2">
-          <a v-if="selectedFood?.id" :href="`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedFood.name)}&query_place_id=${selectedFood.id}`" target="_blank" rel="noopener noreferrer" class="w-full bg-bento-primary text-white font-bold py-3 px-6 rounded-xl hover:bg-opacity-90 transition-all flex items-center justify-center shadow-md">
+          <a v-if="selectedFood?.id" :href="`http://googleusercontent.com/maps.google.com/search/?api=1&query=${encodeURIComponent(selectedFood.name)}&query_place_id=${selectedFood.id}`" target="_blank" rel="noopener noreferrer" class="w-full bg-bento-primary text-white font-bold py-3 px-6 rounded-xl hover:bg-opacity-90 transition-all flex items-center justify-center shadow-md">
             <i class="fa-solid fa-map-location-dot mr-2"></i> 帶我去吃！
           </a>
           <button @click="closeResult" class="w-full bg-gray-100 text-gray-700 font-bold py-3 px-6 rounded-xl hover:bg-gray-200 transition-all flex items-center justify-center">
@@ -89,11 +103,19 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue';
+// 👉 新增 onUnmounted 確保離開頁面時清除計時器
+import { ref, onMounted, computed, onUnmounted } from 'vue'; 
 import axios from 'axios';
 import Roulette from './components/Roulette.vue';
 import FilterDrawer from './components/FilterDrawer.vue';
 import { useLocation } from './composables/useLocation';
+
+import logoImg from './assets/LOGO-去背.png';
+import food1 from './assets/food1.png';
+import food2 from './assets/food2.png';
+import food3 from './assets/food3.png';
+import food4 from './assets/food4.png';
+import food5 from './assets/food5.png';
 
 interface RestaurantInfo {
   id?: string;
@@ -124,13 +146,17 @@ const isSpinning = ref(false);
 const showResult = ref(false);
 const selectedFood = ref<RestaurantInfo | null>(null);
 const isFilterOpen = ref(false);
-
 const hasFetchedData = ref(false);
 
 const currentFilters = ref({
   distance: 500, types: [] as string[], avoids: [] as string[], priceLevels: [] as string[],
   spinCount: 6 
 });
+
+// 👉 圖片輪播邏輯
+const foodImages = [food1, food2, food3, food4, food5];
+const currentFoodIndex = ref(0);
+let foodInterval: ReturnType<typeof setInterval>;
 
 const statusIconClass = computed(() => {
   switch (location.value.status) {
@@ -154,7 +180,7 @@ const fetchRestaurants = async () => {
 
     if (response.data.status === 'success' && rouletteRef.value) {
       rouletteRef.value.setOptions(response.data.results);
-      hasFetchedData.value = true;
+      hasFetchedData.value = true; 
     }
   } catch (error) {
     console.error('抓取餐廳名單失敗:', error);
@@ -162,7 +188,16 @@ const fetchRestaurants = async () => {
 };
 
 onMounted(() => {
-  getLocation(); // 依然會獲取定位，但不會觸發抓資料
+  getLocation();
+
+  foodInterval = setInterval(() => {
+    currentFoodIndex.value = (currentFoodIndex.value + 1) % foodImages.length;
+  }, 3500);
+});
+
+// 👉 清除計時器防止記憶體洩漏
+onUnmounted(() => {
+  if (foodInterval) clearInterval(foodInterval);
 });
 
 const handleApplyFilters = async (filters: any) => {
@@ -187,4 +222,4 @@ const handleSpinEnd = (result: RestaurantInfo) => {
 const closeResult = () => showResult.value = false;
 </script>
 
-<style src="./style/App.css" scoped></style>
+<style src="./style/APP.css" scoped></style>

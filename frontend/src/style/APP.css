@@ -2,7 +2,7 @@
 
 .app-container {
   /* 讓容器至少有整個螢幕的高度，並使用 flex 垂直排列 */
-  @apply min-h-screen flex flex-col items-center font-sans;
+  @apply min-h-screen flex flex-col items-center font-sans overflow-x-hidden;
 }
 
 .roulette-placeholder {
@@ -40,4 +40,36 @@
 .location-status {
   @apply bg-white/50 px-4 py-1.5 rounded-full inline-flex border-2 border-gray-800;
   box-shadow: 2px 2px 0px 0px rgba(31, 41, 55, 1);
+}
+
+/* =========================================
+   漂浮食物動畫 & 輪播漸變效果
+   ========================================= */
+
+/* 1. 上下漂浮的關鍵影格 */
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-8px) rotate(3deg);
+  }
+}
+
+/* 2. 套用漂浮動畫的 class */
+.floating-food {
+  animation: float 3.5s ease-in-out infinite;
+  filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.15));
+}
+
+/* 3. Vue <Transition name="food-fade"> 的漸變效果 (純淨無閃爍版) */
+.food-fade-enter-active,
+.food-fade-leave-active {
+  transition: opacity 0.5s ease;
+}
+
+/* 進入前與離開後的狀態 (純透明度變化，不加 scale 避免打架) */
+.food-fade-enter-from,
+.food-fade-leave-to {
+  opacity: 0;
 }
