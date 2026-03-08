@@ -89,7 +89,7 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted, computed } from 'vue'; // 移除了 watch
+import { ref, onMounted, computed } from 'vue';
 import axios from 'axios';
 import Roulette from './components/Roulette.vue';
 import FilterDrawer from './components/FilterDrawer.vue';
