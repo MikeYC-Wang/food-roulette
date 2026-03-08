@@ -3,9 +3,9 @@ import os
 from dotenv import load_dotenv
 from sqlalchemy.ext.asyncio import create_async_engine
 
-# ⚠️ 這裡非常重要：必須引入你在 main.py 定義的 Base 與 Restaurant 模型
-# 這樣 SQLAlchemy 才知道要根據哪張「設計圖」來建表
-from main import Base, Restaurant 
+# ⚠️ 這裡非常重要：必須引入你在 main.py 定義的 Base 與所有資料表模型
+# 新增了 User 和 SpinHistory，這樣 SQLAlchemy 才知道要建這三張表
+from main import Base, Restaurant, User, SpinHistory
 
 # 載入 .env 環境變數
 load_dotenv()
@@ -32,7 +32,7 @@ async def init_database():
         # 讓 SQLAlchemy 自動比對並建立所有繼承自 Base 的資料表
         await conn.run_sync(Base.metadata.create_all)
         
-    print("✅ 資料表 'restaurants' 建立成功！")
+    print("✅ 資料表 'restaurants', 'users', 'spin_history' 建立/更新成功！")
     
     # 釋放連線資源
     await engine.dispose()

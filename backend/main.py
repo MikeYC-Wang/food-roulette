@@ -2,20 +2,39 @@ import os
 import random
 import json
 import httpx
+from datetime import datetime, timedelta
 from typing import List, Optional
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from pydantic import BaseModel
-from sqlalchemy import select, func, text
+from sqlalchemy import select, func, text, ForeignKey
 from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
-from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column
+from sqlalchemy.orm import DeclarativeBase, Mapped, mapped_column, relationship
 from geoalchemy2 import Geometry
 from geoalchemy2.functions import ST_MakePoint, ST_SetSRID
 
+# 資安相關套件
+from passlib.context import CryptContext
+import jwt
+
 load_dotenv()
 
+# ==========================================
+# 🔐 資安與 JWT 設定
+# ==========================================
+SECRET_KEY = os.getenv("SECRET_KEY", "your-super-secret-key-please-change-in-production")
+ALGORITHM = "HS256"
+ACCESS_TOKEN_EXPIRE_MINUTES = 60 * 24 * 7 # Token 效期設為 7 天
+
+pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/login")
+
+# ==========================================
+# 🗄️ 資料庫設定與模型
+# ==========================================
 DATABASE_URL = os.getenv("DATABASE_URL")
 GOOGLE_MAPS_API_KEY = os.getenv("GOOGLE_MAPS_API_KEY")
 
@@ -33,24 +52,79 @@ AsyncSessionLocal = async_sessionmaker(engine, expire_on_commit=False)
 class Base(DeclarativeBase):
     pass
 
+# 🍔 餐廳暫存表
 class Restaurant(Base):
     __tablename__ = "restaurants"
-    
     id: Mapped[int] = mapped_column(primary_key=True)
     google_place_id: Mapped[Optional[str]] = mapped_column(unique=True, index=True)
     name: Mapped[str] = mapped_column()
     type: Mapped[str] = mapped_column()
     rating: Mapped[float] = mapped_column()
     price_level: Mapped[Optional[str]] = mapped_column()
-    # 👉 新增：將營業時間存為 JSON 字串，避免資料庫相容性問題
     opening_hours: Mapped[Optional[str]] = mapped_column(nullable=True)
     geom: Mapped[any] = mapped_column(Geometry("POINT", srid=4326))
+
+# 使用者資料表
+class User(Base):
+    __tablename__ = "users"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    username: Mapped[str] = mapped_column(unique=True, index=True)
+    hashed_password: Mapped[str] = mapped_column() # 絕對不存明碼！
+    created_at: Mapped[datetime] = mapped_column(default=func.now())
+
+# 歷史轉盤紀錄資料表
+class SpinHistory(Base):
+    __tablename__ = "spin_history"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    restaurant_name: Mapped[str] = mapped_column()
+    google_place_id: Mapped[Optional[str]] = mapped_column()
+    spin_time: Mapped[datetime] = mapped_column(default=func.now())
 
 async def get_db():
     async with AsyncSessionLocal() as session:
         yield session
 
-app = FastAPI(title="食來運轉 API")
+# ==========================================
+# 資安輔助函式 (密碼驗證與 Token 產生)
+# ==========================================
+def verify_password(plain_password, hashed_password):
+    return pwd_context.verify(plain_password, hashed_password)
+
+def get_password_hash(password):
+    return pwd_context.hash(password)
+
+def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
+    to_encode = data.copy()
+    expire = datetime.utcnow() + (expires_delta if expires_delta else timedelta(minutes=15))
+    to_encode.update({"exp": expire})
+    return jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+
+# 解析 Token 並取得當前使用者的依賴注入函式
+async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncSession = Depends(get_db)):
+    credentials_exception = HTTPException(
+        status_code=status.HTTP_401_UNAUTHORIZED,
+        detail="無法驗證身份，請重新登入",
+        headers={"WWW-Authenticate": "Bearer"},
+    )
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username: str = payload.get("sub")
+        if username is None:
+            raise credentials_exception
+    except jwt.PyJWTError:
+        raise credentials_exception
+        
+    result = await db.execute(select(User).where(User.username == username))
+    user = result.scalars().first()
+    if user is None:
+        raise credentials_exception
+    return user
+
+# ==========================================
+# FastAPI 初始化
+# ==========================================
+app = FastAPI(title="食來運轉 API - 資安升級版")
 
 app.add_middleware(
     CORSMiddleware,
@@ -60,7 +134,100 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# 👉 更新：加入 spinCount (轉幾家餐廳)
+# ==========================================
+# API 路由：註冊與登入
+# ==========================================
+class UserCreate(BaseModel):
+    username: str
+    password: str
+
+@app.post("/api/register", status_code=status.HTTP_201_CREATED)
+async def register_user(user: UserCreate, db: AsyncSession = Depends(get_db)):
+    # 檢查帳號是否重複
+    result = await db.execute(select(User).where(User.username == user.username))
+    if result.scalars().first():
+        raise HTTPException(status_code=400, detail="此帳號已被註冊")
+    
+    # 將密碼進行 Bcrypt 雜湊加密後存入資料庫
+    new_user = User(
+        username=user.username,
+        hashed_password=get_password_hash(user.password)
+    )
+    db.add(new_user)
+    await db.commit()
+    return {"message": "註冊成功！請前往登入。"}
+
+@app.post("/api/login")
+async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(), db: AsyncSession = Depends(get_db)):
+    # 驗證帳號
+    result = await db.execute(select(User).where(User.username == form_data.username))
+    user = result.scalars().first()
+    
+    # 驗證密碼 (比對明碼與資料庫的雜湊碼)
+    if not user or not verify_password(form_data.password, user.hashed_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="帳號或密碼錯誤",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    # 核發 JWT Token
+    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token = create_access_token(
+        data={"sub": user.username}, expires_delta=access_token_expires
+    )
+    return {"access_token": access_token, "token_type": "bearer", "username": user.username}
+
+# ==========================================
+# API 路由：歷史紀錄 (需要 JWT Token 才能訪問)
+# ==========================================
+class HistoryCreate(BaseModel):
+    restaurant_name: str
+    google_place_id: Optional[str] = None
+
+@app.post("/api/history")
+async def save_spin_history(
+    history: HistoryCreate, 
+    current_user: User = Depends(get_current_user), # 資安守門員：必須攜帶 Token
+    db: AsyncSession = Depends(get_db)
+):
+    new_history = SpinHistory(
+        user_id=current_user.id,
+        restaurant_name=history.restaurant_name,
+        google_place_id=history.google_place_id
+    )
+    db.add(new_history)
+    await db.commit()
+    return {"message": "歷史紀錄已儲存"}
+
+@app.get("/api/history")
+async def get_user_history(
+    current_user: User = Depends(get_current_user), # 資安守門員：必須攜帶 Token
+    db: AsyncSession = Depends(get_db)
+):
+    # 撈出該使用者的所有歷史紀錄，依時間倒序排列
+    result = await db.execute(
+        select(SpinHistory)
+        .where(SpinHistory.user_id == current_user.id)
+        .order_by(SpinHistory.spin_time.desc())
+        .limit(20) # 預設回傳最近 20 筆
+    )
+    histories = result.scalars().all()
+    return {
+        "user": current_user.username,
+        "history": [
+            {
+                "id": h.id,
+                "restaurant_name": h.restaurant_name,
+                "google_place_id": h.google_place_id,
+                "spin_time": h.spin_time.strftime("%Y-%m-%d %H:%M:%S")
+            } for h in histories
+        ]
+    }
+
+# ==========================================
+# 轉盤 API
+# ==========================================
 class SpinRequest(BaseModel):
     lat: float
     lng: float
@@ -68,26 +235,18 @@ class SpinRequest(BaseModel):
     types: List[str]
     avoids: List[str]
     priceLevels: List[str] = []
-    spinCount: int = 6 # 預設 6 家
-
-@app.get("/")
-async def root():
-    return {"message": "食來運轉後端 (動態抓取版) 正常運作中！"}
+    spinCount: int = 6
 
 @app.post("/api/spin")
 async def get_roulette_data(req: SpinRequest, db: AsyncSession = Depends(get_db)):
     try:
-        # 1. 清空舊資料
         await db.execute(text("TRUNCATE TABLE restaurants RESTART IDENTITY CASCADE;"))
-        
-        # 2. 即時打 Google Places API
         places_url = "https://places.googleapis.com/v1/places:searchNearby"
         headers = {
             "Content-Type": "application/json",
             "X-Goog-Api-Key": GOOGLE_MAPS_API_KEY,
             "X-Goog-FieldMask": "places.id,places.displayName,places.rating,places.location,places.types,places.priceLevel,places.regularOpeningHours"
         }
-
         payload = {
             "includedTypes": ["restaurant"],
             "maxResultCount": req.spinCount,
@@ -104,10 +263,6 @@ async def get_roulette_data(req: SpinRequest, db: AsyncSession = Depends(get_db)
             resp = await client.post(places_url, json=payload, headers=headers)
             if resp.status_code == 200:
                 places_data = resp.json().get("places", [])
-                
-                # ==========================================
-                # 步驟 3: 將最新資料接到資料庫
-                # ==========================================
                 for p in places_data:
                     place_id = p.get("id")
                     name = p.get("displayName", {}).get("text", "未知餐廳")
@@ -115,11 +270,8 @@ async def get_roulette_data(req: SpinRequest, db: AsyncSession = Depends(get_db)
                     loc = p.get("location", {})
                     p_lat, p_lng = loc.get("latitude"), loc.get("longitude")
                     price_level = p.get("priceLevel")
-                    
                     p_types = p.get("types", ["restaurant"])
                     p_type = p_types[0] if p_types else "restaurant"
-                    
-                    # 處理營業時間轉為字串
                     opening_hours_str = json.dumps(p.get("regularOpeningHours", {}), ensure_ascii=False)
 
                     sql = text("""
@@ -133,11 +285,8 @@ async def get_roulette_data(req: SpinRequest, db: AsyncSession = Depends(get_db)
                         "opening_hours": opening_hours_str,
                         "lng": p_lng, "lat": p_lat
                     })
-                await db.commit() # 確認儲存
+                await db.commit()
 
-        # ==========================================
-        # 步驟 4: 從資料庫進行條件篩選
-        # ==========================================
         user_point = ST_SetSRID(ST_MakePoint(req.lng, req.lat), 4326)
         from sqlalchemy import cast
         from geoalchemy2 import Geography
@@ -168,7 +317,7 @@ async def get_roulette_data(req: SpinRequest, db: AsyncSession = Depends(get_db)
                 "type": r.type, 
                 "rating": float(r.rating),
                 "priceLevel": r.price_level,
-                "openingHours": json.loads(r.opening_hours) if r.opening_hours else None # 👉 回傳營業時間物件
+                "openingHours": json.loads(r.opening_hours) if r.opening_hours else None
             } 
             for r in restaurants
         ]
@@ -176,9 +325,6 @@ async def get_roulette_data(req: SpinRequest, db: AsyncSession = Depends(get_db)
         if not formatted_list:
             formatted_list = [{"name": "附近沒找到美食", "type": "N/A", "rating": 0}]
 
-        # ==========================================
-        # 步驟 5: 根據使用者設定的 spinCount 決定數量
-        # ==========================================
         sample_size = min(len(formatted_list), req.spinCount)
         final_selection = random.sample(formatted_list, sample_size) if formatted_list else []
 
