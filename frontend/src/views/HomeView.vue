@@ -1,0 +1,229 @@
+<template>
+  <div class="app-container bg-bento-bg relative">
+    <header class="pt-4 text-center flex flex-col items-center z-10 w-full">
+      
+      <h1 class="flex justify-center w-full px-4">
+        <img :src="logoImg" alt="食來運轉" class="h-[13rem] object-contain drop-shadow-sm" />
+      </h1>
+
+      <div class="location-status mt-4 flex items-center justify-center gap-2 relative z-20">
+        <i :class="statusIconClass" class="text-lg"></i>
+        <span class="text-sm font-bold text-gray-600">{{ location.message }}</span>
+      </div>
+
+      <div v-if="location.status !== 'loading'" class="h-40 relative flex items-center justify-center w-full">
+        <Transition name="food-fade">
+          <img 
+            :key="currentFoodIndex"
+            :src="foodImages[currentFoodIndex]" 
+            alt="food indicator"
+            class="floating-food absolute h-56 w-56 object-contain scale-[1.8] pointer-events-none" 
+          />
+        </Transition>
+      </div>
+    </header>
+
+    <main class="flex-1 flex flex-col items-center justify-start pt-6 w-full px-4 z-20">
+      <Roulette ref="rouletteRef" @spin-end="handleSpinEnd" />
+      
+      <button 
+        v-if="hasFetchedData"
+        @click="triggerSpin" :disabled="isSpinning"
+        class="spin-btn bg-bento-accent text-white text-3xl font-bold mt-16 py-4 px-12 rounded-xl"
+        :class="{ 'opacity-70 cursor-not-allowed transform translate-y-1 shadow-none': isSpinning }"
+      >
+        {{ isSpinning ? '轉運中...' : '轉運！' }}
+      </button>
+
+      <button 
+        v-else
+        @click="isFilterOpen = true"
+        class="spin-btn bg-bento-primary text-white text-3xl font-bold mt-16 py-4 px-12 rounded-xl animate-bounce"
+      >
+        <i class="fa-solid fa-hand-pointer mr-2"></i>請先設定篩選條件
+      </button>
+    </main>
+
+    <footer class="pb-12 pt-6 flex justify-center gap-16 w-full relative z-20">
+    <button @click="isFilterOpen = true" class="bottom-icon-btn text-bento-secondary">
+        <i class="fa-solid fa-filter"></i>
+    </button>
+
+    <button @click="$router.push('/login')" class="bottom-icon-btn text-gray-700">
+        <i class="fa-solid fa-user"></i>
+    </button>
+
+    <button class="bottom-icon-btn text-bento-primary">
+        <i class="fa-solid fa-map-location-dot"></i>
+    </button>
+    </footer>
+
+    <div v-if="showResult" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 backdrop-blur-sm transition-opacity">
+      <div class="bg-white w-11/12 max-w-sm rounded-3xl p-6 shadow-2xl transform transition-all border border-gray-100">
+        <div class="w-20 h-20 mx-auto bg-bento-primary rounded-full flex items-center justify-center -mt-16 mb-4 shadow-lg border-4 border-white">
+          <i class="fa-solid fa-utensils text-4xl text-white"></i>
+        </div>
+
+        <div class="text-center">
+          <h2 class="text-2xl font-black text-gray-800 mb-2 leading-tight">
+            {{ selectedFood?.name }}
+          </h2>
+          
+          <div class="flex items-center justify-center space-x-3 text-sm mb-3">
+            <span class="bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full font-bold flex items-center shadow-sm">
+              <i class="fa-solid fa-star mr-1"></i> {{ selectedFood?.rating || '無評分' }}
+            </span>
+            <span class="bg-gray-100 text-gray-600 px-3 py-1 rounded-full font-medium shadow-sm capitalize">
+              {{ formatType(selectedFood?.type) }}
+            </span>
+          </div>
+
+          <div class="flex items-center justify-center space-x-2 text-sm mb-6">
+            <span class="text-green-700 font-bold bg-green-50 px-3 py-1.5 rounded-full shadow-sm border border-green-100">
+              {{ formatPrice(selectedFood?.priceLevel) }}
+            </span>
+            
+            <span v-if="selectedFood?.openingHours" 
+                  class="font-bold px-3 py-1.5 rounded-full shadow-sm border"
+                  :class="selectedFood.openingHours.openNow ? 'bg-blue-50 text-blue-700 border-blue-100' : 'bg-red-50 text-red-600 border-red-100'">
+              <i class="fa-solid fa-clock mr-1"></i> 
+              {{ selectedFood.openingHours.openNow ? '營業中' : '休息中' }}
+            </span>
+          </div>
+        </div>
+
+        <div class="flex flex-col space-y-3 mt-2">
+          <a v-if="selectedFood?.id" :href="`http://googleusercontent.com/maps.google.com/search/?api=1&query=${encodeURIComponent(selectedFood.name)}&query_place_id=${selectedFood.id}`" target="_blank" rel="noopener noreferrer" class="w-full bg-bento-primary text-white font-bold py-3 px-6 rounded-xl hover:bg-opacity-90 transition-all flex items-center justify-center shadow-md">
+            <i class="fa-solid fa-map-location-dot mr-2"></i> 帶我去吃！
+          </a>
+          <button @click="closeResult" class="w-full bg-gray-100 text-gray-700 font-bold py-3 px-6 rounded-xl hover:bg-gray-200 transition-all flex items-center justify-center">
+            <i class="fa-solid fa-rotate-right mr-2"></i> 再轉一次
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <FilterDrawer v-model:isOpen="isFilterOpen" @apply="handleApplyFilters" />
+  </div>
+</template>
+
+<script setup lang="ts">
+import { ref, onMounted, computed, onUnmounted } from 'vue'; 
+import axios from 'axios';
+import Roulette from '../components/Roulette.vue';
+import FilterDrawer from '../components/FilterDrawer.vue';
+import { useLocation } from '../composables/useLocation';
+
+import logoImg from '../assets/LOGO-去背.png';
+import food1 from '../assets/food1.png';
+import food2 from '../assets/food2.png';
+import food3 from '../assets/food3.png';
+import food4 from '../assets/food4.png';
+import food5 from '../assets/food5.png';
+
+interface RestaurantInfo {
+  id?: string;
+  name: string;
+  type?: string;
+  rating?: number;
+  priceLevel?: string;
+  openingHours?: { openNow: boolean; weekdayDescriptions: string[] }; 
+}
+
+const formatPrice = (level?: string) => {
+  const priceMap: Record<string, string> = {
+    'PRICE_LEVEL_INEXPENSIVE': '💰 平價', 'PRICE_LEVEL_MODERATE': '💰💰 中等',
+    'PRICE_LEVEL_EXPENSIVE': '💰💰💰 稍貴', 'PRICE_LEVEL_VERY_EXPENSIVE': '💰💰💰💰 高級',
+  };
+  return level ? (priceMap[level] || '未知價位') : '未知價位';
+};
+
+const formatType = (t?: string) => {
+  const map: Record<string, string> = { restaurant: '餐廳', cafe: '咖啡廳', bakery: '烘焙坊', bar: '酒吧', fast_food: '速食', meal_takeaway: '外帶', meal_delivery: '外送' };
+  return t ? (map[t] || t) : '美食';
+};
+
+const { location, getLocation } = useLocation();
+const rouletteRef = ref<InstanceType<typeof Roulette> | null>(null);
+
+const isSpinning = ref(false);
+const showResult = ref(false);
+const selectedFood = ref<RestaurantInfo | null>(null);
+const isFilterOpen = ref(false);
+const hasFetchedData = ref(false);
+
+const currentFilters = ref({
+  distance: 500, types: [] as string[], avoids: [] as string[], priceLevels: [] as string[],
+  spinCount: 6 
+});
+
+// 👉 圖片輪播邏輯
+const foodImages = [food1, food2, food3, food4, food5];
+const currentFoodIndex = ref(0);
+let foodInterval: ReturnType<typeof setInterval>;
+
+const statusIconClass = computed(() => {
+  switch (location.value.status) {
+    case 'loading': return 'fa-solid fa-circle-notch fa-spin text-gray-400';
+    case 'success': return 'fa-solid fa-location-dot text-bento-secondary';
+    case 'default': return 'fa-solid fa-map-pin text-bento-primary';
+    case 'error': return 'fa-solid fa-circle-exclamation text-bento-accent';
+    default: return 'fa-solid fa-location-crosshairs';
+  }
+});
+
+const fetchRestaurants = async () => {
+  try {
+    const response = await axios.post('http://127.0.0.1:8001/api/spin', {
+      lat: location.value.lat, lng: location.value.lng,
+      distance: currentFilters.value.distance,
+      types: currentFilters.value.types, avoids: currentFilters.value.avoids,
+      priceLevels: currentFilters.value.priceLevels,
+      spinCount: currentFilters.value.spinCount 
+    });
+
+    if (response.data.status === 'success' && rouletteRef.value) {
+      rouletteRef.value.setOptions(response.data.results);
+      hasFetchedData.value = true; 
+    }
+  } catch (error) {
+    console.error('抓取餐廳名單失敗:', error);
+  }
+};
+
+onMounted(() => {
+  getLocation();
+
+  foodInterval = setInterval(() => {
+    currentFoodIndex.value = (currentFoodIndex.value + 1) % foodImages.length;
+  }, 3500);
+});
+
+// 👉 清除計時器防止記憶體洩漏
+onUnmounted(() => {
+  if (foodInterval) clearInterval(foodInterval);
+});
+
+const handleApplyFilters = async (filters: any) => {
+  currentFilters.value = filters;
+  showResult.value = false;
+  await fetchRestaurants();
+};
+
+const triggerSpin = async () => {
+  if (isSpinning.value || !rouletteRef.value) return;
+  isSpinning.value = true;
+  showResult.value = false;
+  rouletteRef.value.spin();
+};
+
+const handleSpinEnd = (result: RestaurantInfo) => {
+  isSpinning.value = false;
+  selectedFood.value = result;
+  showResult.value = true;
+};
+
+const closeResult = () => showResult.value = false;
+</script>
+
+<style src="../style/APP.css" scoped></style>

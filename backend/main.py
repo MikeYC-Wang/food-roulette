@@ -2,6 +2,9 @@ import os
 import random
 import json
 import httpx
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
 from datetime import datetime, timedelta
 from typing import List, Optional
 
@@ -23,7 +26,7 @@ import jwt
 load_dotenv()
 
 # ==========================================
-# 🔐 資安與 JWT 設定
+# 資安與 JWT 設定
 # ==========================================
 SECRET_KEY = os.getenv("SECRET_KEY", "your-super-secret-key-please-change-in-production")
 ALGORITHM = "HS256"
@@ -33,10 +36,17 @@ pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="/api/login")
 
 # ==========================================
-# 🗄️ 資料庫設定與模型
+# 資料庫設定與模型
 # ==========================================
 DATABASE_URL = os.getenv("DATABASE_URL")
 GOOGLE_MAPS_API_KEY = os.getenv("GOOGLE_MAPS_API_KEY")
+
+# 讀取 SMTP 寄信設定
+SMTP_EMAIL = os.getenv("SMTP_EMAIL")
+SMTP_PASSWORD = os.getenv("SMTP_PASSWORD")
+
+# 暫存驗證碼的字典 (以記憶體暫存)
+verification_codes = {}
 
 if not DATABASE_URL:
     db_user = os.getenv("DB_USER", "postgres")
@@ -52,7 +62,7 @@ AsyncSessionLocal = async_sessionmaker(engine, expire_on_commit=False)
 class Base(DeclarativeBase):
     pass
 
-# 🍔 餐廳暫存表
+# 餐廳暫存表
 class Restaurant(Base):
     __tablename__ = "restaurants"
     id: Mapped[int] = mapped_column(primary_key=True)
@@ -69,7 +79,8 @@ class User(Base):
     __tablename__ = "users"
     id: Mapped[int] = mapped_column(primary_key=True)
     username: Mapped[str] = mapped_column(unique=True, index=True)
-    hashed_password: Mapped[str] = mapped_column() # 絕對不存明碼！
+    email: Mapped[str] = mapped_column(unique=True, index=True)
+    hashed_password: Mapped[str] = mapped_column()
     created_at: Mapped[datetime] = mapped_column(default=func.now())
 
 # 歷史轉盤紀錄資料表
@@ -140,21 +151,73 @@ app.add_middleware(
 class UserCreate(BaseModel):
     username: str
     password: str
+    email: str
+    code: str
+
+class SendCodeRequest(BaseModel):
+    email: str
+
+@app.post("/api/send-code")
+async def send_verification_code(req: SendCodeRequest):
+    # 產生 6 位數隨機驗證碼
+    code = str(random.randint(100000, 999999))
+    verification_codes[req.email] = code
+
+    try:
+        # 設定信件內容
+        msg = MIMEMultipart()
+        msg['From'] = SMTP_EMAIL
+        msg['To'] = req.email
+        msg['Subject'] = "食來運轉 - 您的註冊驗證碼"
+        
+        body = f"歡迎加入食來運轉！\n\n您的註冊驗證碼是：【 {code} 】\n\n請在頁面上輸入此驗證碼完成註冊。\n如果這不是您的操作，請直接忽略此信件。"
+        msg.attach(MIMEText(body, 'plain'))
+        
+        # 透過 Gmail SMTP 寄信
+        server = smtplib.SMTP('smtp.gmail.com', 587)
+        server.starttls()
+        server.login(SMTP_EMAIL, SMTP_PASSWORD)
+        server.send_message(msg)
+        server.quit()
+        
+        return {"message": "驗證碼已發送至您的信箱！"}
+    except Exception as e:
+        print(f"寄信失敗: {str(e)}")
+        raise HTTPException(status_code=500, detail="發送驗證碼失敗，請稍後再試")
 
 @app.post("/api/register", status_code=status.HTTP_201_CREATED)
 async def register_user(user: UserCreate, db: AsyncSession = Depends(get_db)):
-    # 檢查帳號是否重複
-    result = await db.execute(select(User).where(User.username == user.username))
-    if result.scalars().first():
+    # 1. 基本的 Email 格式防呆檢查
+    if "@" not in user.email or "." not in user.email:
+        raise HTTPException(status_code=400, detail="無效的電子郵件格式")
+
+    # 2. 檢查驗證碼是否正確
+    if user.email not in verification_codes or verification_codes[user.email] != user.code:
+        raise HTTPException(status_code=400, detail="驗證碼錯誤或已失效")
+
+    # 3. 檢查帳號是否重複
+    result_user = await db.execute(select(User).where(User.username == user.username))
+    if result_user.scalars().first():
         raise HTTPException(status_code=400, detail="此帳號已被註冊")
+        
+    # 4. 檢查 Email 是否重複
+    result_email = await db.execute(select(User).where(User.email == user.email))
+    if result_email.scalars().first():
+        raise HTTPException(status_code=400, detail="此 Email 已被註冊")
     
     # 將密碼進行 Bcrypt 雜湊加密後存入資料庫
     new_user = User(
         username=user.username,
+        email=user.email,
         hashed_password=get_password_hash(user.password)
     )
     db.add(new_user)
     await db.commit()
+
+    # 註冊成功後，清除暫存的驗證碼
+    if user.email in verification_codes:
+        del verification_codes[user.email]
+
     return {"message": "註冊成功！請前往登入。"}
 
 @app.post("/api/login")
