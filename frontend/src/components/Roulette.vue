@@ -88,7 +88,7 @@ const wheelStyle = computed(() => {
  */
 const setOptions = (newOptions: RouletteOption[]) => {
   if (newOptions && newOptions.length > 0) {
-    options.value = newOptions.slice(0, 6);
+    options.value = newOptions; 
   } else {
     options.value = [{ name: '附近沒找到美食', type: 'N/A', rating: 0 }];
   }
