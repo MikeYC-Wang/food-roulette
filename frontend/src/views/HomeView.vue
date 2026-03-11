@@ -45,17 +45,18 @@
     </main>
 
     <footer class="pb-12 pt-6 flex justify-center gap-16 w-full relative z-20">
-    <button @click="isFilterOpen = true" class="bottom-icon-btn text-bento-secondary">
+      <button @click="isFilterOpen = true" class="bottom-icon-btn text-bento-secondary">
         <i class="fa-solid fa-filter"></i>
-    </button>
+      </button>
 
-    <button @click="$router.push('/login')" class="bottom-icon-btn text-gray-700">
+      <button @click="handleUserIconClick" class="bottom-icon-btn text-gray-700 relative">
         <i class="fa-solid fa-user"></i>
-    </button>
-
-    <button class="bottom-icon-btn text-bento-primary">
+        <span v-if="isLoggedIn" class="absolute top-0 right-0 block h-3 w-3 rounded-full bg-green-500 ring-2 ring-white"></span>
+      </button>
+      
+      <button class="bottom-icon-btn text-bento-primary">
         <i class="fa-solid fa-map-location-dot"></i>
-    </button>
+      </button>
     </footer>
 
     <div v-if="showResult" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 backdrop-blur-sm transition-opacity">
@@ -109,6 +110,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted, computed, onUnmounted } from 'vue'; 
+import { useRouter } from 'vue-router';
 import axios from 'axios';
 import Roulette from '../components/Roulette.vue';
 import FilterDrawer from '../components/FilterDrawer.vue';
@@ -143,6 +145,7 @@ const formatType = (t?: string) => {
   return t ? (map[t] || t) : '美食';
 };
 
+const router = useRouter();
 const { location, getLocation } = useLocation();
 const rouletteRef = ref<InstanceType<typeof Roulette> | null>(null);
 
@@ -157,7 +160,7 @@ const currentFilters = ref({
   spinCount: 6 
 });
 
-// 👉 圖片輪播邏輯
+// 圖片輪播邏輯
 const foodImages = [food1, food2, food3, food4, food5];
 const currentFoodIndex = ref(0);
 let foodInterval: ReturnType<typeof setInterval>;
@@ -199,7 +202,7 @@ onMounted(() => {
   }, 3500);
 });
 
-// 👉 清除計時器防止記憶體洩漏
+// 清除計時器防止記憶體洩漏
 onUnmounted(() => {
   if (foodInterval) clearInterval(foodInterval);
 });
@@ -224,6 +227,17 @@ const handleSpinEnd = (result: RestaurantInfo) => {
 };
 
 const closeResult = () => showResult.value = false;
+
+// 判斷是否登入與按鈕點擊處理
+const isLoggedIn = ref(!!localStorage.getItem('token'));
+
+const handleUserIconClick = () => {
+  if (localStorage.getItem('token')) {
+    router.push('/profile');
+  } else {
+    router.push('/login');
+  }
+};
 </script>
 
 <style src="../style/APP.css" scoped></style>

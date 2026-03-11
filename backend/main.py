@@ -242,6 +242,17 @@ async def login_for_access_token(form_data: OAuth2PasswordRequestForm = Depends(
     return {"access_token": access_token, "token_type": "bearer", "username": user.username}
 
 # ==========================================
+# API 路由：取得目前登入使用者資料
+# ==========================================
+@app.get("/api/me")
+async def get_current_user_info(current_user: User = Depends(get_current_user)):
+    return {
+        "username": current_user.username,
+        "email": current_user.email,
+        "created_at": current_user.created_at.strftime("%Y-%m-%d")
+    }
+
+# ==========================================
 # API 路由：歷史紀錄 (需要 JWT Token 才能訪問)
 # ==========================================
 class HistoryCreate(BaseModel):
