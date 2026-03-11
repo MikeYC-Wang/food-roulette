@@ -235,8 +235,25 @@ const fetchRestaurants = async () => {
   }
 };
 
+const fetchCustomList = async () => {
+  const token = localStorage.getItem('token');
+  if (token) {
+    try {
+      const res = await axios.get('http://127.0.0.1:8001/api/custom-list', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      if (res.data.custom_list) {
+        customList.value = res.data.custom_list;
+      }
+    } catch (error) {
+      console.error('取得自訂名單失敗', error);
+    }
+  }
+};
+
 onMounted(() => {
   getLocation();
+  fetchCustomList();
 
   foodInterval = setInterval(() => {
     currentFoodIndex.value = (currentFoodIndex.value + 1) % foodImages.length;
@@ -253,8 +270,9 @@ const handleApplyFilters = async (filters: any) => {
   await fetchRestaurants();
 };
 
-const handleApplyCustomList = (newList: string[]) => {
+const handleApplyCustomList = async (newList: string[]) => {
   customList.value = newList;
+  
   if (rouletteRef.value && newList.length > 0) {
     const formattedList = newList.map(name => ({
       name: name,
@@ -262,6 +280,19 @@ const handleApplyCustomList = (newList: string[]) => {
     }));
     rouletteRef.value.setOptions(formattedList);
     hasFetchedData.value = true;
+  }
+
+  const token = localStorage.getItem('token');
+  if (token) {
+    try {
+      await axios.post('http://127.0.0.1:8001/api/custom-list', {
+        restaurants: newList
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+    } catch (error) {
+      console.error('儲存自訂名單失敗', error);
+    }
   }
 };
 

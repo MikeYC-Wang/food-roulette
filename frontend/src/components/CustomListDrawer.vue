@@ -32,7 +32,7 @@
 
           <p class="text-xs text-gray-500 font-bold text-right -mt-2">最多 12 家，目前：{{ customList.length }} 家</p>
 
-          <div class="flex flex-col gap-3 overflow-y-auto flex-1 custom-scrollbar pr-2 min-h-[200px]">
+          <div class="flex flex-col gap-3 overflow-y-auto flex-1 custom-scrollbar pr-2 min-h-[200px] pt-2 -mt-2">
             <div v-if="customList.length === 0" class="text-center text-gray-400 font-bold py-8">
               還沒有名單喔，趕快在上面輸入吧！
             </div>
@@ -64,13 +64,20 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
+import { ref, watch } from 'vue';
 
 const props = defineProps<{ isOpen: boolean; initialList: string[] }>();
 const emit = defineEmits(['update:isOpen', 'apply']);
 
 const newItemName = ref('');
-const customList = ref<string[]>([...props.initialList]);
+const customList = ref<string[]>([]);
+
+watch(() => props.isOpen, (newVal) => {
+  if (newVal) {
+    customList.value = [...props.initialList];
+    newItemName.value = '';
+  }
+});
 
 const addItem = () => {
   if (newItemName.value.trim() && customList.value.length < 12) {

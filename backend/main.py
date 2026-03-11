@@ -92,6 +92,12 @@ class SpinHistory(Base):
     google_place_id: Mapped[Optional[str]] = mapped_column()
     spin_time: Mapped[datetime] = mapped_column(default=func.now())
 
+class CustomRestaurant(Base):
+    __tablename__ = "custom_restaurants"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    name: Mapped[str] = mapped_column()
+
 async def get_db():
     async with AsyncSessionLocal() as session:
         yield session
@@ -298,6 +304,46 @@ async def get_user_history(
             } for h in histories
         ]
     }
+
+# ==========================================
+# API 路由：自訂口袋名單 (需要 JWT Token 才能訪問)
+# ==========================================
+class CustomListUpdate(BaseModel):
+    restaurants: List[str]
+
+@app.get("/api/custom-list")
+async def get_custom_list(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    # 撈出該使用者的自訂名單，並依據 id 排序確保順序
+    result = await db.execute(
+        select(CustomRestaurant.name)
+        .where(CustomRestaurant.user_id == current_user.id)
+        .order_by(CustomRestaurant.id)
+    )
+    names = result.scalars().all()
+    return {"custom_list": names}
+
+@app.post("/api/custom-list")
+async def update_custom_list(
+    req: CustomListUpdate,
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    # 暴力但有效的方法：直接刪除該使用者的舊名單，然後寫入新的
+    await db.execute(
+        text("DELETE FROM custom_restaurants WHERE user_id = :uid"),
+        {"uid": current_user.id}
+    )
+    
+    # 逐筆寫入新名單
+    for name in req.restaurants:
+        new_rest = CustomRestaurant(user_id=current_user.id, name=name)
+        db.add(new_rest)
+        
+    await db.commit()
+    return {"message": "自訂名單已儲存至資料庫"}
 
 # ==========================================
 # 轉盤 API

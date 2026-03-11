@@ -14,3 +14,7 @@
 .custom-scrollbar::-webkit-scrollbar-thumb:hover { 
   background-color: #9ca3af; 
 }
+
+.bg-white.p-3.rounded-xl.border-2.border-gray-800:hover {
+  z-index: 10;
+}
