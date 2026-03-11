@@ -220,10 +220,25 @@ const triggerSpin = async () => {
   rouletteRef.value.spin();
 };
 
-const handleSpinEnd = (result: RestaurantInfo) => {
+const handleSpinEnd = async (result: RestaurantInfo) => {
   isSpinning.value = false;
   selectedFood.value = result;
   showResult.value = true;
+
+  // 檢查是否已登入，若有 token 則發送儲存紀錄的 API
+  const token = localStorage.getItem('token');
+  if (token && result) {
+    try {
+      await axios.post('http://127.0.0.1:8001/api/history', {
+        restaurant_name: result.name,
+        google_place_id: result.id || ''
+      }, {
+        headers: { Authorization: `Bearer ${token}` } // 記得帶上這把「鑰匙」
+      });
+    } catch (error) {
+      console.error('儲存歷史紀錄失敗:', error);
+    }
+  }
 };
 
 const closeResult = () => showResult.value = false;
