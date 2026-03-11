@@ -157,7 +157,7 @@ const hasFetchedData = ref(false);
 
 const currentFilters = ref({
   distance: 500, types: [] as string[], features: [] as string[], priceLevels: [] as string[],
-  spinCount: 6 
+  spinCount: 6, openNow: true, highRating: false 
 });
 
 // 圖片輪播邏輯
@@ -181,9 +181,11 @@ const fetchRestaurants = async () => {
       lat: location.value.lat, lng: location.value.lng,
       distance: currentFilters.value.distance,
       types: currentFilters.value.types, 
-      features: currentFilters.value.features, // 將 avoids 改為 features
+      features: currentFilters.value.features,
       priceLevels: currentFilters.value.priceLevels,
-      spinCount: currentFilters.value.spinCount 
+      spinCount: currentFilters.value.spinCount,
+      openNow: currentFilters.value.openNow, 
+      highRating: currentFilters.value.highRating
     });
 
     if (response.data.status === 'success' && rouletteRef.value) {

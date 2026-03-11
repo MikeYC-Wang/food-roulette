@@ -310,6 +310,8 @@ class SpinRequest(BaseModel):
     features: List[str] = []
     priceLevels: List[str] = []
     spinCount: int = 6
+    openNow: bool = False
+    highRating: bool = False
 
 @app.post("/api/spin")
 async def get_roulette_data(req: SpinRequest, db: AsyncSession = Depends(get_db)):
@@ -321,40 +323,36 @@ async def get_roulette_data(req: SpinRequest, db: AsyncSession = Depends(get_db)
             "X-Goog-FieldMask": "places.id,places.displayName,places.rating,places.location,places.types,places.priceLevel,places.regularOpeningHours"
         }
 
-        # 將「想吃什麼」與「加分條件」組合起來，發揮 Google 搜尋的最大威力
+        # 組合所有的文字搜尋條件
         query_parts = []
         if req.types:
             query_parts.extend(req.types)
         if req.features:
             query_parts.extend(req.features)
+            
+        query_str = " ".join(query_parts) if query_parts else "美食"
+        
+        # 為了避免過濾後數量不夠，我們向 Google 多抓 10 家當備用池 (最高限制 20 家)
+        fetch_count = min(req.spinCount + 10, 20)
 
-        if query_parts:
-            places_url = "https://places.googleapis.com/v1/places:searchText"
-            query_str = " ".join(query_parts)
-            payload = {
-                "textQuery": f"{query_str} 餐廳", 
-                "maxResultCount": req.spinCount, # 嚴格依照使用者選擇的數量抓取
-                "languageCode": "zh-TW",
-                "locationRestriction": {
-                    "circle": {
-                        "center": {"latitude": req.lat, "longitude": req.lng},
-                        "radius": float(req.distance)
-                    }
+        places_url = "https://places.googleapis.com/v1/places:searchText"
+        payload = {
+            "textQuery": f"{query_str} 餐廳", 
+            "maxResultCount": fetch_count,
+            "languageCode": "zh-TW",
+            "locationRestriction": {
+                "circle": {
+                    "center": {"latitude": req.lat, "longitude": req.lng},
+                    "radius": float(req.distance)
                 }
             }
-        else:
-            places_url = "https://places.googleapis.com/v1/places:searchNearby"
-            payload = {
-                "includedTypes": ["restaurant"],
-                "maxResultCount": req.spinCount, # 嚴格依照使用者選擇的數量抓取
-                "languageCode": "zh-TW",
-                "locationRestriction": {
-                    "circle": {
-                        "center": {"latitude": req.lat, "longitude": req.lng},
-                        "radius": float(req.distance)
-                    }
-                }
-            }
+        }
+        
+        # 直接利用 Google 原生的 API 參數來過濾營業時間與評價
+        if req.openNow:
+            payload["openNow"] = True
+        if req.highRating:
+            payload["minRating"] = 4.0
 
         async with httpx.AsyncClient() as client:
             resp = await client.post(places_url, json=payload, headers=headers)
@@ -394,6 +392,10 @@ async def get_roulette_data(req: SpinRequest, db: AsyncSession = Depends(get_db)
 
         if req.priceLevels and len(req.priceLevels) > 0:
             query = query.where(Restaurant.price_level.in_(req.priceLevels))
+            
+        # 雙重保險：資料庫再次過濾 4 顆星
+        if req.highRating:
+            query = query.where(Restaurant.rating >= 4.0)
 
         db_result = await db.execute(query)
         restaurants = db_result.scalars().all()
@@ -411,12 +413,15 @@ async def get_roulette_data(req: SpinRequest, db: AsyncSession = Depends(get_db)
         ]
 
         if not formatted_list:
-            formatted_list = [{"name": "附近沒找到符合條件的美食", "type": "N/A", "rating": 0}]
+            return {"status": "success", "results": [{"name": "太挑剔囉！附近沒找到符合的餐廳", "type": "N/A", "rating": 0}]}
 
-        # 直接回傳結果，不需要再用 random.sample 抽樣，因為數量已經剛好了
+        # 從備用池中，隨機抽出使用者真正指定的數量
+        sample_size = min(len(formatted_list), req.spinCount)
+        final_selection = random.sample(formatted_list, sample_size)
+
         return {
             "status": "success",
-            "results": formatted_list
+            "results": final_selection
         }
 
     except Exception as e:

@@ -2,12 +2,27 @@
   <Transition name="fade">
     <div v-if="isOpen" class="fixed inset-0 bg-black/50 z-40 flex flex-col justify-end backdrop-blur-sm" @click.self="closeDrawer">
       <Transition name="slide-up" appear>
-        <div v-if="isOpen" class="bg-bento-bg w-full rounded-t-3xl border-t-4 border-l-4 border-r-4 border-gray-800 p-6 pb-12 shadow-[0px_-4px_0px_0px_rgba(31,41,55,1)] flex flex-col gap-6 max-h-[85vh] overflow-y-auto">
+        <div v-if="isOpen" class="bg-bento-bg w-full rounded-t-3xl border-t-4 border-l-4 border-r-4 border-gray-800 p-6 pb-12 shadow-[0px_-4px_0px_0px_rgba(31,41,55,1)] flex flex-col gap-6 max-h-[85vh] overflow-y-auto custom-scrollbar">
           
           <div class="flex justify-between items-center mb-2">
             <h2 class="text-2xl font-bold text-gray-800 tracking-wider">篩選條件</h2>
             <button @click="closeDrawer" class="text-gray-800 text-3xl hover:text-bento-accent transition-colors">
               <i class="fa-solid fa-xmark"></i>
+            </button>
+          </div>
+
+          <div class="flex gap-4">
+            <button @click="selectedOpenNow = !selectedOpenNow" 
+                    class="flex-1 py-3 font-bold rounded-xl border-2 border-gray-800 transition-all flex justify-center items-center gap-2"
+                    :style="selectedOpenNow ? '' : 'box-shadow: 3px 3px 0px 0px rgba(31, 41, 55, 1);'"
+                    :class="selectedOpenNow ? 'bg-green-600 text-white translate-y-1 translate-x-1' : 'bg-white text-gray-700'">
+              <i class="fa-solid fa-door-open"></i> 目前營業中
+            </button>
+            <button @click="selectedHighRating = !selectedHighRating" 
+                    class="flex-1 py-3 font-bold rounded-xl border-2 border-gray-800 transition-all flex justify-center items-center gap-2"
+                    :style="selectedHighRating ? '' : 'box-shadow: 3px 3px 0px 0px rgba(31, 41, 55, 1);'"
+                    :class="selectedHighRating ? 'bg-bento-primary text-gray-900 translate-y-1 translate-x-1' : 'bg-white text-gray-700'">
+              <i class="fa-solid fa-star"></i> 4星以上
             </button>
           </div>
 
@@ -83,7 +98,9 @@ const priceLevels = [
   { label: '💰💰💰 稍貴', value: 'PRICE_LEVEL_EXPENSIVE' },
   { label: '💰💰💰💰 高級', value: 'PRICE_LEVEL_VERY_EXPENSIVE' }
 ];
-const foodTypes = ['麵食', '便當', '健康餐', '小吃', '異國料理', '速食'];
+
+// 擴充了實用選項
+const foodTypes = ['麵食', '便當', '健康餐', '小吃', '異國料理', '速食', '素食/蔬食', '吃到飽', '甜點/咖啡廳'];
 const featureList = ['有冷氣', '好停車', '寵物友善', '深夜食堂', '網美打卡', '適合聚餐'];
 
 const selectedDistance = ref(500);
@@ -91,6 +108,10 @@ const selectedTypes = ref<string[]>([]);
 const selectedFeatures = ref<string[]>([]);
 const selectedPrices = ref<string[]>([]);
 const selectedSpinCount = ref(6);
+
+// 新增狀態綁定
+const selectedOpenNow = ref(true);
+const selectedHighRating = ref(false);
 
 const toggleSelection = (list: string[], item: string) => {
   const index = list.indexOf(item);
@@ -106,7 +127,9 @@ const applyFilters = () => {
     types: selectedTypes.value,
     features: selectedFeatures.value,
     priceLevels: selectedPrices.value,
-    spinCount: selectedSpinCount.value
+    spinCount: selectedSpinCount.value,
+    openNow: selectedOpenNow.value, 
+    highRating: selectedHighRating.value
   });
   closeDrawer();
 };
