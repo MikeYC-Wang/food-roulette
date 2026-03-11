@@ -53,10 +53,10 @@
           </div>
 
           <div class="filter-group">
-            <h3 class="text-lg font-bold text-gray-700 mb-3"><i class="fa-solid fa-bolt mr-2 text-bento-accent"></i>避雷區</h3>
+            <h3 class="text-lg font-bold text-gray-700 mb-3"><i class="fa-solid fa-heart mr-2 text-bento-accent"></i>加分條件</h3>
             <div class="flex flex-wrap gap-3">
-              <button v-for="avoid in avoidList" :key="avoid" @click="toggleSelection(selectedAvoids, avoid)" class="filter-chip px-4 py-2 font-bold rounded-lg border-2 border-gray-800 transition-all" :class="selectedAvoids.includes(avoid) ? 'bg-gray-700 text-white chip-active' : 'bg-white text-gray-600 chip-inactive'">
-                {{ avoid }}
+              <button v-for="feature in featureList" :key="feature" @click="toggleSelection(selectedFeatures, feature)" class="filter-chip px-4 py-2 font-bold rounded-lg border-2 border-gray-800 transition-all" :class="selectedFeatures.includes(feature) ? 'bg-bento-accent text-white chip-active border-bento-accent' : 'bg-white text-gray-600 chip-inactive'">
+                {{ feature }}
               </button>
             </div>
           </div>
@@ -84,11 +84,11 @@ const priceLevels = [
   { label: '💰💰💰💰 高級', value: 'PRICE_LEVEL_VERY_EXPENSIVE' }
 ];
 const foodTypes = ['麵食', '便當', '健康餐', '小吃', '異國料理', '速食'];
-const avoidList = ['不吃辣', '不要香菜', '排除連鎖店'];
+const featureList = ['有冷氣', '好停車', '寵物友善', '深夜食堂', '網美打卡', '適合聚餐'];
 
 const selectedDistance = ref(500);
 const selectedTypes = ref<string[]>([]);
-const selectedAvoids = ref<string[]>([]);
+const selectedFeatures = ref<string[]>([]);
 const selectedPrices = ref<string[]>([]);
 const selectedSpinCount = ref(6);
 
@@ -104,7 +104,7 @@ const applyFilters = () => {
   emit('apply', {
     distance: selectedDistance.value,
     types: selectedTypes.value,
-    avoids: selectedAvoids.value,
+    features: selectedFeatures.value,
     priceLevels: selectedPrices.value,
     spinCount: selectedSpinCount.value
   });

@@ -156,7 +156,7 @@ const isFilterOpen = ref(false);
 const hasFetchedData = ref(false);
 
 const currentFilters = ref({
-  distance: 500, types: [] as string[], avoids: [] as string[], priceLevels: [] as string[],
+  distance: 500, types: [] as string[], features: [] as string[], priceLevels: [] as string[],
   spinCount: 6 
 });
 
@@ -180,7 +180,8 @@ const fetchRestaurants = async () => {
     const response = await axios.post('http://127.0.0.1:8001/api/spin', {
       lat: location.value.lat, lng: location.value.lng,
       distance: currentFilters.value.distance,
-      types: currentFilters.value.types, avoids: currentFilters.value.avoids,
+      types: currentFilters.value.types, 
+      features: currentFilters.value.features, // 將 avoids 改為 features
       priceLevels: currentFilters.value.priceLevels,
       spinCount: currentFilters.value.spinCount 
     });

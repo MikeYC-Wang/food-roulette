@@ -307,7 +307,7 @@ class SpinRequest(BaseModel):
     lng: float
     distance: int
     types: List[str]
-    avoids: List[str]
+    features: List[str] = []
     priceLevels: List[str] = []
     spinCount: int = 6
 
@@ -315,23 +315,46 @@ class SpinRequest(BaseModel):
 async def get_roulette_data(req: SpinRequest, db: AsyncSession = Depends(get_db)):
     try:
         await db.execute(text("TRUNCATE TABLE restaurants RESTART IDENTITY CASCADE;"))
-        places_url = "https://places.googleapis.com/v1/places:searchNearby"
         headers = {
             "Content-Type": "application/json",
             "X-Goog-Api-Key": GOOGLE_MAPS_API_KEY,
             "X-Goog-FieldMask": "places.id,places.displayName,places.rating,places.location,places.types,places.priceLevel,places.regularOpeningHours"
         }
-        payload = {
-            "includedTypes": ["restaurant"],
-            "maxResultCount": req.spinCount,
-            "languageCode": "zh-TW",
-            "locationRestriction": {
-                "circle": {
-                    "center": {"latitude": req.lat, "longitude": req.lng},
-                    "radius": req.distance
+
+        # 將「想吃什麼」與「加分條件」組合起來，發揮 Google 搜尋的最大威力
+        query_parts = []
+        if req.types:
+            query_parts.extend(req.types)
+        if req.features:
+            query_parts.extend(req.features)
+
+        if query_parts:
+            places_url = "https://places.googleapis.com/v1/places:searchText"
+            query_str = " ".join(query_parts)
+            payload = {
+                "textQuery": f"{query_str} 餐廳", 
+                "maxResultCount": req.spinCount, # 嚴格依照使用者選擇的數量抓取
+                "languageCode": "zh-TW",
+                "locationRestriction": {
+                    "circle": {
+                        "center": {"latitude": req.lat, "longitude": req.lng},
+                        "radius": float(req.distance)
+                    }
                 }
             }
-        }
+        else:
+            places_url = "https://places.googleapis.com/v1/places:searchNearby"
+            payload = {
+                "includedTypes": ["restaurant"],
+                "maxResultCount": req.spinCount, # 嚴格依照使用者選擇的數量抓取
+                "languageCode": "zh-TW",
+                "locationRestriction": {
+                    "circle": {
+                        "center": {"latitude": req.lat, "longitude": req.lng},
+                        "radius": float(req.distance)
+                    }
+                }
+            }
 
         async with httpx.AsyncClient() as client:
             resp = await client.post(places_url, json=payload, headers=headers)
@@ -369,17 +392,8 @@ async def get_roulette_data(req: SpinRequest, db: AsyncSession = Depends(get_db)
             func.ST_DWithin(cast(Restaurant.geom, Geography), cast(user_point, Geography), float(req.distance))
         )
 
-        if req.types and len(req.types) > 0:
-            query = query.where(Restaurant.type.in_(req.types))
         if req.priceLevels and len(req.priceLevels) > 0:
             query = query.where(Restaurant.price_level.in_(req.priceLevels))
-
-        for avoid in req.avoids:
-            if avoid == "不吃辣":
-                query = query.where(~Restaurant.name.contains("辣"))
-            elif avoid == "排除連鎖店":
-                for chain in ["麥當勞", "肯德基", "必勝客", "摩斯漢堡"]:
-                    query = query.where(~Restaurant.name.contains(chain))
 
         db_result = await db.execute(query)
         restaurants = db_result.scalars().all()
@@ -397,14 +411,12 @@ async def get_roulette_data(req: SpinRequest, db: AsyncSession = Depends(get_db)
         ]
 
         if not formatted_list:
-            formatted_list = [{"name": "附近沒找到美食", "type": "N/A", "rating": 0}]
+            formatted_list = [{"name": "附近沒找到符合條件的美食", "type": "N/A", "rating": 0}]
 
-        sample_size = min(len(formatted_list), req.spinCount)
-        final_selection = random.sample(formatted_list, sample_size) if formatted_list else []
-
+        # 直接回傳結果，不需要再用 random.sample 抽樣，因為數量已經剛好了
         return {
             "status": "success",
-            "results": final_selection
+            "results": formatted_list
         }
 
     except Exception as e:
