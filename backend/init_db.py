@@ -2,15 +2,14 @@ import asyncio
 import os
 from dotenv import load_dotenv
 from sqlalchemy.ext.asyncio import create_async_engine
-from main import Base, Restaurant, User, SpinHistory, CustomRestaurant
-from main import Base, Restaurant, User, SpinHistory, CustomRestaurant, FavoriteRestaurant
 
-from main import Base, Restaurant, User, SpinHistory
+# 👉 幫你整理好乾淨的 import，確保這 5 個資料表都有被載入
+from main import Base, Restaurant, User, SpinHistory, CustomRestaurant, FavoriteRestaurant
 
 # 載入 .env 環境變數
 load_dotenv()
 
-# 取得資料庫連線設定 (邏輯與 main.py 一致)
+# 取得資料庫連線設定
 DATABASE_URL = os.getenv("DATABASE_URL")
 if not DATABASE_URL:
     db_user = os.getenv("DB_USER", "postgres")
@@ -27,12 +26,15 @@ async def init_database():
     engine = create_async_engine(DATABASE_URL, echo=False)
     
     async with engine.begin() as conn:
-        print("開始建立資料表...")
+        print("⚠️ 正在刪除舊資料表 (為了讓新欄位順利套用)...")
+        # 👉 關鍵新增：先 Drop 掉所有舊表
+        await conn.run_sync(Base.metadata.drop_all)
         
-        # 讓 SQLAlchemy 自動比對並建立所有繼承自 Base 的資料表
+        print("開始建立全新資料表...")
+        # 👉 再重新 Create，這樣就會包含最新的 avatar_url 欄位了
         await conn.run_sync(Base.metadata.create_all)
         
-    print("✅ 資料表 'restaurants', 'users', 'spin_history' 建立/更新成功！")
+    print("✅ 所有資料表已重新建立，結構完美同步！")
     
     # 釋放連線資源
     await engine.dispose()

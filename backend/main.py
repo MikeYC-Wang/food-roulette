@@ -5,6 +5,9 @@ import httpx
 import smtplib
 import uuid      # 用於 OAuth 產生隨機狀態與密碼
 import base64    # 用於解析 LINE 的 Token
+import shutil # 用於儲存檔案
+from fastapi import File, UploadFile
+from fastapi.staticfiles import StaticFiles
 from email.mime.text import MIMEText
 from email.mime.multipart import MIMEMultipart
 from datetime import datetime, timedelta
@@ -95,6 +98,7 @@ class User(Base):
     hashed_password: Mapped[str] = mapped_column()
     created_at: Mapped[datetime] = mapped_column(default=func.now())
     is_verified: Mapped[bool] = mapped_column(default=True)
+    avatar_url: Mapped[Optional[str]] = mapped_column(nullable=True)
 
 # 歷史轉盤紀錄資料表
 class SpinHistory(Base):
@@ -164,6 +168,13 @@ async def get_current_user(token: str = Depends(oauth2_scheme), db: AsyncSession
 # FastAPI 初始化
 # ==========================================
 app = FastAPI(title="食來運轉 API - 完整功能版")
+
+# 建立存放圖片的資料夾
+UPLOAD_DIR = "static/avatars"
+os.makedirs(UPLOAD_DIR, exist_ok=True)
+
+# 讓外部可以透過 http://localhost:8001/static/avatars 看到圖片
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 app.add_middleware(
     CORSMiddleware,
@@ -293,6 +304,7 @@ async def google_callback(code: str, db: AsyncSession = Depends(get_db)):
 
     email = user_info.get("email")
     name = user_info.get("name", "GoogleUser")
+    picture = user_info.get("picture")
 
     # 檢查或自動註冊
     result = await db.execute(select(User).where(User.email == email))
@@ -300,13 +312,18 @@ async def google_callback(code: str, db: AsyncSession = Depends(get_db)):
     
     if not user:
         user = User(
-            username=email, # 預設用 Email 當帳號
+            username=name,
             email=email,
-            hashed_password=get_password_hash(str(uuid.uuid4()))
+            hashed_password=get_password_hash(str(uuid.uuid4())),
+            is_verified=True,
+            avatar_url=picture
         )
         db.add(user)
-        await db.commit()
-        await db.refresh(user)
+    else:
+        user.avatar_url = picture
+
+    await db.commit()
+    await db.refresh(user)
 
     token = create_access_token(data={"sub": user.username})
     return RedirectResponse(f"{FRONTEND_URL}/login?token={token}")
@@ -340,23 +357,54 @@ async def line_callback(code: str, db: AsyncSession = Depends(get_db)):
         payload = json.loads(base64.b64decode(id_token.split('.')[1] + '==').decode())
         email = payload.get("email", f"{payload.get('sub')}@line.me")
         line_name = payload.get("name", "LINE使用者")
+        picture = payload.get("picture")
 
     result = await db.execute(select(User).where(User.email == email))
     user = result.scalars().first()
     
     if not user:
         user = User(
-            username=line_name, 
+            username=line_name,
             email=email,
             hashed_password=get_password_hash(str(uuid.uuid4())),
-            is_verified=True
+            is_verified=True,
+            avatar_url=picture
         )
         db.add(user)
-        await db.commit()
-        await db.refresh(user)
+    else:
+        user.avatar_url = picture
+
+    await db.commit()
+    await db.refresh(user)
 
     token = create_access_token(data={"sub": user.username})
     return RedirectResponse(f"{FRONTEND_URL}/login?token={token}")
+
+@app.post("/api/user/upload-avatar")
+async def upload_avatar(
+    file: UploadFile = File(...), 
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    # 1. 檢查檔案格式
+    if not file.content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="只允許上傳圖片檔案")
+    
+    # 2. 決定檔名 (使用使用者 ID 避免碰撞)
+    extension = file.filename.split(".")[-1]
+    file_name = f"user_{current_user.id}.{extension}"
+    file_path = os.path.join(UPLOAD_DIR, file_name)
+    
+    # 3. 儲存檔案
+    with open(file_path, "wb") as buffer:
+        shutil.copyfileobj(file.file, buffer)
+    
+    # 4. 更新資料庫裡的網址 (改為後端提供的網址路徑)
+    avatar_url = f"http://127.0.0.1:8001/static/avatars/{file_name}"
+    current_user.avatar_url = avatar_url
+    await db.commit()
+    
+    return {"message": "頭像上傳成功", "avatar_url": avatar_url}
 
 # ==========================================
 # API 路由：其他功能 (me, history, custom-list, favorites, search, spin)
@@ -367,6 +415,7 @@ async def get_current_user_info(current_user: User = Depends(get_current_user)):
     return {
         "username": current_user.username,
         "email": current_user.email,
+        "avatar_url": current_user.avatar_url,
         "created_at": current_user.created_at.strftime("%Y-%m-%d")
     }
 
