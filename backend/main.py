@@ -62,6 +62,8 @@ FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:5173")
 
 # 暫存驗證碼的字典 (以記憶體暫存)
 verification_codes = {}
+# 暫存重設密碼驗證碼
+reset_codes = {}
 
 if not DATABASE_URL:
     db_user = os.getenv("DB_USER", "postgres")
@@ -550,6 +552,72 @@ async def get_roulette_data(req: SpinRequest, db: AsyncSession = Depends(get_db)
     except Exception as e:
         print(f"後端錯誤: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal Server Error")
+
+# ==========================================
+# API 路由：忘記密碼
+# ==========================================
+class PasswordResetRequest(BaseModel):
+    email: str
+
+@app.post("/api/password-reset/request")
+async def request_password_reset(req: PasswordResetRequest, db: AsyncSession = Depends(get_db)):
+    # 1. 檢查這個信箱有沒有註冊過
+    result = await db.execute(select(User).where(User.email == req.email))
+    user = result.scalars().first()
+    if not user:
+        raise HTTPException(status_code=404, detail="找不到此電子郵件對應的帳號")
+    
+    # 2. 產生 6 位數驗證碼並暫存
+    code = str(random.randint(100000, 999999))
+    reset_codes[req.email] = code
+    
+    # 3. 寄出重設信件
+    try:
+        msg = MIMEMultipart()
+        msg['From'] = SMTP_EMAIL
+        msg['To'] = req.email
+        msg['Subject'] = "食來運轉 - 密碼重設驗證碼"
+        
+        body = f"您好！\n\n您的密碼重設驗證碼是：【 {code} 】\n\n請在頁面上輸入此驗證碼以設定新密碼。\n如果您並未要求重設密碼，請直接忽略此信件。"
+        msg.attach(MIMEText(body, 'plain'))
+        
+        server = smtplib.SMTP('smtp.gmail.com', 587)
+        server.starttls()
+        server.login(SMTP_EMAIL, SMTP_PASSWORD)
+        server.send_message(msg)
+        server.quit()
+        
+        return {"message": "密碼重設驗證碼已發送至您的信箱！"}
+    except Exception as e:
+        print(f"寄信失敗: {str(e)}")
+        raise HTTPException(status_code=500, detail="發送驗證碼失敗，請稍後再試")
+
+class PasswordResetConfirm(BaseModel):
+    email: str
+    code: str
+    new_password: str
+
+@app.post("/api/password-reset/confirm")
+async def confirm_password_reset(req: PasswordResetConfirm, db: AsyncSession = Depends(get_db)):
+    # 1. 檢查驗證碼
+    if reset_codes.get(req.email) != req.code:
+        raise HTTPException(status_code=400, detail="驗證碼錯誤或已失效")
+        
+    # 2. 找出使用者
+    result = await db.execute(select(User).where(User.email == req.email))
+    user = result.scalars().first()
+    if not user:
+        raise HTTPException(status_code=404, detail="找不到此電子郵件對應的帳號")
+        
+    # 3. 更新密碼 (記得要雜湊加密)
+    user.hashed_password = get_password_hash(req.new_password)
+    await db.commit()
+    
+    # 4. 清除驗證碼
+    if req.email in reset_codes:
+        del reset_codes[req.email]
+        
+    return {"message": "密碼重設成功！請使用新密碼登入。"}
 
 if __name__ == "__main__":
     import uvicorn
