@@ -79,7 +79,7 @@
         </div>
 
         <div class="flex flex-col gap-3">
-          <a href="http://127.0.0.1:8001/api/auth/google" class="w-full bg-white text-gray-700 font-bold py-3 rounded-xl border-2 border-gray-800 flex items-center justify-center gap-3 transition-transform active:translate-y-1 active:translate-x-1" style="box-shadow: 3px 3px 0px 0px rgba(31, 41, 55, 1);">
+          <a :href="`${baseUrl}/api/auth/google`" class="w-full bg-white text-gray-700 font-bold py-3 rounded-xl border-2 border-gray-800 flex items-center justify-center gap-3 transition-transform active:translate-y-1 active:translate-x-1" style="box-shadow: 3px 3px 0px 0px rgba(31, 41, 55, 1);">
               <svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" class="w-6 h-6">
                 <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"></path>
                 <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"></path>
@@ -90,7 +90,7 @@
               Google 登入
           </a>
 
-          <a href="http://127.0.0.1:8001/api/auth/line" class="w-full bg-[#06C755] text-white font-bold py-3 rounded-xl border-2 border-gray-800 flex items-center justify-center gap-3 transition-transform active:translate-y-1 active:translate-x-1" style="box-shadow: 3px 3px 0px 0px rgba(31, 41, 55, 1);">
+          <a :href="`${baseUrl}/api/auth/line`" class="w-full bg-[#06C755] text-white font-bold py-3 rounded-xl border-2 border-gray-800 flex items-center justify-center gap-3 transition-transform active:translate-y-1 active:translate-x-1" style="box-shadow: 3px 3px 0px 0px rgba(31, 41, 55, 1);">
               <i class="fa-brands fa-line text-2xl"></i> LINE 登入
           </a>
         </div>
@@ -115,7 +115,7 @@ import axios from 'axios';
 
 const router = useRouter();
 const route = useRoute();
-
+const baseUrl = import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8001';
 // 取代原本的 isLoginMode，使用 viewMode 控制三種狀態
 const viewMode = ref<'login' | 'register' | 'forgot'>('login');
 

@@ -111,7 +111,7 @@
 import { toast } from 'vue3-toastify';
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
-import axios from 'axios';
+import api from '../api/axios';
 
 const router = useRouter();
 const isLoading = ref(true);
@@ -130,6 +130,7 @@ const userInfo = ref({
 const spinHistory = ref<any[]>([]);
 const favoriteList = ref<any[]>([]); 
 
+// 在 ProfileView.vue 中替換：
 onMounted(async () => {
   const token = localStorage.getItem('token');
   if (!token) {
@@ -139,9 +140,9 @@ onMounted(async () => {
 
   try {
     const [userRes, historyRes, favRes] = await Promise.all([
-      axios.get('http://127.0.0.1:8001/api/me', { headers: { Authorization: `Bearer ${token}` } }),
-      axios.get('http://127.0.0.1:8001/api/history', { headers: { Authorization: `Bearer ${token}` } }),
-      axios.get('http://127.0.0.1:8001/api/favorites', { headers: { Authorization: `Bearer ${token}` } })
+      api.get('/api/me'),
+      api.get('/api/history'),
+      api.get('/api/favorites')
     ]);
     
     userInfo.value = userRes.data;
@@ -149,62 +150,45 @@ onMounted(async () => {
     favoriteList.value = favRes.data.favorites;
   } catch (error) {
     console.error('取得資料失敗', error);
-    localStorage.removeItem('token');
-    localStorage.removeItem('username');
-    router.push('/login');
+    // 這裡不用再手動導向了，總機會幫我們處理！
   } finally {
     isLoading.value = false;
   }
 });
 
-// 點擊大頭貼觸發隱藏的 file input
-const triggerFileInput = () => {
-  if (!isUploadingAvatar.value) {
-    fileInput.value?.click();
-  }
-};
-
-// 處理上傳邏輯
 const handleFileUpload = async (event: Event) => {
   const target = event.target as HTMLInputElement;
-  
-  // 使用可選串連運算子 (?.) 安全地取值
   const file = target.files?.[0];
-
-  // 讓 TypeScript 100% 確定 file 存在
   if (!file) return;
 
-  // 基本格式防呆
   if (!file.type.startsWith('image/')) {
     toast.warning('請上傳圖片檔案！');
-    target.value = ''; // 清空 input
+    target.value = ''; 
     return;
   }
 
-  // 包裝成 FormData 準備傳給後端
   const formData = new FormData();
-  formData.append('file', file); // 此時 TypeScript 已經確信 file 不是 undefined 了！
-
+  formData.append('file', file);
   isUploadingAvatar.value = true;
 
   try {
-    const token = localStorage.getItem('token');
-    const res = await axios.post('http://127.0.0.1:8001/api/user/upload-avatar', formData, {
-      headers: {
-        'Authorization': `Bearer ${token}`,
-        'Content-Type': 'multipart/form-data'
-      }
+    const res = await api.post('/api/user/upload-avatar', formData, {
+      headers: { 'Content-Type': 'multipart/form-data' }
     });
-    
-    // 成功後，即時更新畫面上的大頭貼
     userInfo.value.avatar_url = res.data.avatar_url;
-    
   } catch (error) {
     console.error('上傳大頭貼失敗', error);
     toast.error('大頭貼上傳失敗，請稍後再試');
   } finally {
     isUploadingAvatar.value = false;
-    target.value = ''; // 無論成功失敗都清空 input，讓使用者下次還能選同一張圖
+    target.value = ''; 
+  }
+};
+
+// 點擊大頭貼觸發隱藏的 file input
+const triggerFileInput = () => {
+  if (!isUploadingAvatar.value) {
+    fileInput.value?.click();
   }
 };
 

@@ -148,7 +148,7 @@
 import { toast } from 'vue3-toastify';
 import { ref, onMounted, computed, onUnmounted } from 'vue'; 
 import { useRouter } from 'vue-router';
-import axios from 'axios';
+import api from '../api/axios';
 import confetti from 'canvas-confetti';
 import Roulette from '../components/Roulette.vue';
 import FilterDrawer from '../components/FilterDrawer.vue';
@@ -164,15 +164,13 @@ import food4 from '../assets/food4.png';
 import food5 from '../assets/food5.png';
 
 const isLocationDrawerOpen = ref(false);
-// 當使用者在任意門按下「我要吃這附近」時觸發
+
 const handleApplyLocation = async (newLoc: any) => {
-  // 修改首頁的定位資料
   location.value.lat = newLoc.lat;
   location.value.lng = newLoc.lng;
   location.value.message = newLoc.name;
   location.value.status = 'success';
   
-  // 如果現在是「附近探索」模式，就立刻幫他重新掃描新地點的美食！
   if (!isCustomMode.value) {
     hasFetchedData.value = false;
     showResult.value = false;
@@ -215,7 +213,7 @@ const isFilterOpen = ref(false);
 const isCustomDrawerOpen = ref(false);
 const isCustomMode = ref(false);
 const customList = ref<string[]>([]);
-const favoriteIds = ref<string[]>([]); // 存放使用者已收藏的餐廳 ID
+const favoriteIds = ref<string[]>([]);
 
 const currentFilters = ref({
   distance: 500, types: [] as string[], features: [] as string[], priceLevels: [] as string[],
@@ -254,7 +252,7 @@ const openAppropriateDrawer = () => {
 
 const fetchRestaurants = async () => {
   try {
-    const response = await axios.post('http://127.0.0.1:8001/api/spin', {
+    const response = await api.post('/api/spin', {
       lat: location.value.lat, lng: location.value.lng,
       distance: currentFilters.value.distance,
       types: currentFilters.value.types, 
@@ -275,12 +273,9 @@ const fetchRestaurants = async () => {
 };
 
 const fetchCustomList = async () => {
-  const token = localStorage.getItem('token');
-  if (token) {
+  if (localStorage.getItem('token')) {
     try {
-      const res = await axios.get('http://127.0.0.1:8001/api/custom-list', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const res = await api.get('/api/custom-list');
       if (res.data.custom_list) {
         customList.value = res.data.custom_list;
       }
@@ -291,12 +286,9 @@ const fetchCustomList = async () => {
 };
 
 const fetchFavorites = async () => {
-  const token = localStorage.getItem('token');
-  if (token) {
+  if (localStorage.getItem('token')) {
     try {
-      const res = await axios.get('http://127.0.0.1:8001/api/favorites', {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      const res = await api.get('/api/favorites');
       favoriteIds.value = res.data.favorites.map((f: any) => f.google_place_id);
     } catch (error) {
       console.error('取得收藏名單失敗', error);
@@ -307,18 +299,15 @@ const fetchFavorites = async () => {
 const toggleFavorite = async () => {
   if (!selectedFood.value || !selectedFood.value.id || isCustomMode.value) return;
   
-  const token = localStorage.getItem('token');
-  if (!token) {
+  if (!localStorage.getItem('token')) {
     toast.info("請先登入才能收藏餐廳喔！");
     return;
   }
   
   try {
-    const res = await axios.post('http://127.0.0.1:8001/api/favorites/toggle', {
+    const res = await api.post('/api/favorites/toggle', {
       restaurant_name: selectedFood.value.name,
       google_place_id: selectedFood.value.id
-    }, {
-      headers: { Authorization: `Bearer ${token}` }
     });
     
     if (res.data.status === 'added') {
@@ -335,7 +324,7 @@ const toggleFavorite = async () => {
 onMounted(() => {
   getLocation();
   fetchCustomList();
-  fetchFavorites(); // 網頁載入時順便抓取使用者的最愛清單
+  fetchFavorites();
 
   foodInterval = setInterval(() => {
     currentFoodIndex.value = (currentFoodIndex.value + 1) % foodImages.length;
@@ -364,14 +353,9 @@ const handleApplyCustomList = async (newList: string[]) => {
     hasFetchedData.value = true;
   }
 
-  const token = localStorage.getItem('token');
-  if (token) {
+  if (localStorage.getItem('token')) {
     try {
-      await axios.post('http://127.0.0.1:8001/api/custom-list', {
-        restaurants: newList
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
+      await api.post('/api/custom-list', { restaurants: newList });
     } catch (error) {
       console.error('儲存自訂名單失敗', error);
     }
@@ -390,23 +374,19 @@ const handleSpinEnd = async (result: RestaurantInfo) => {
   selectedFood.value = result;
   showResult.value = true;
 
-  // 觸發紙碎噴發動畫
   confetti({
-    particleCount: 150,           // 紙碎的數量
-    spread: 80,                   // 噴發的散開角度
-    origin: { y: 0.55 },          // 從畫面哪個高度噴發 (0 是最頂端，1 是最底端。0.55 大約在彈窗位置)
-    zIndex: 9999,                 // 確保紙碎會蓋在黑色半透明遮罩 (z-50) 的最上面
-    colors: ['#E9C46A', '#2A9D8F', '#E76F51', '#A8DADC', '#4285F4'] // 偷偷加入配合你 App 風格的顏色
+    particleCount: 150,
+    spread: 80,
+    origin: { y: 0.55 },
+    zIndex: 9999,
+    colors: ['#E9C46A', '#2A9D8F', '#E76F51', '#A8DADC', '#4285F4']
   });
 
-  const token = localStorage.getItem('token');
-  if (token && result) {
+  if (localStorage.getItem('token') && result) {
     try {
-      await axios.post('http://127.0.0.1:8001/api/history', {
+      await api.post('/api/history', {
         restaurant_name: result.name,
         google_place_id: result.id || ''
-      }, {
-        headers: { Authorization: `Bearer ${token}` }
       });
     } catch (error) {
       console.error('儲存歷史紀錄失敗:', error);
@@ -426,14 +406,13 @@ const handleUserIconClick = () => {
   }
 };
 
-// 處理分享轉盤結果
 const shareResult = async () => {
   if (!selectedFood.value) return;
 
   const restaurantName = selectedFood.value.name;
   const placeId = selectedFood.value.id || ''; 
 
-  let mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(restaurantName)}`; 
+  let mapUrl = `http://googleusercontent.com/maps.google.com/${encodeURIComponent(restaurantName)}`; 
   if (placeId) {
     mapUrl += `&query_place_id=${placeId}`;
   }
