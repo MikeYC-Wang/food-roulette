@@ -513,42 +513,107 @@ class SpinRequest(BaseModel):
     spinCount: int = 6
     openNow: bool = False
     highRating: bool = False
+    isDrinkMode: bool = False
 
 @app.post("/api/spin")
 async def get_roulette_data(req: SpinRequest, db: AsyncSession = Depends(get_db)):
     try:
+        # 1. 清空舊的暫存資料
         await db.execute(text("TRUNCATE TABLE restaurants RESTART IDENTITY CASCADE;"))
-        headers = {"Content-Type": "application/json", "X-Goog-Api-Key": GOOGLE_MAPS_API_KEY, "X-Goog-FieldMask": "places.id,places.displayName,places.rating,places.location,places.types,places.priceLevel,places.regularOpeningHours"}
-        query_parts = req.types + req.features
-        query_str = " ".join(query_parts) if query_parts else "美食"
+        
+        headers = {
+            "Content-Type": "application/json", 
+            "X-Goog-Api-Key": GOOGLE_MAPS_API_KEY, 
+            "X-Goog-FieldMask": "places.id,places.displayName,places.rating,places.location,places.types,places.priceLevel,places.regularOpeningHours"
+        }
+
+        # 2. 判斷是否為手搖飲模式
+        if req.isDrinkMode:
+            # 手搖飲模式：強迫關鍵字包含「手搖飲」或「飲料店」
+            drink_query = "手搖飲 飲料店"
+            # 如果使用者有選特定的飲料類型 (例如: 珍珠奶茶)，也加進去
+            if req.types:
+                drink_query += " " + " ".join(req.types)
+            query_str = drink_query
+        else:
+            # 一般美食模式：維持原本邏輯
+            query_parts = req.types + req.features
+            query_str = " ".join(query_parts) if query_parts else "美食 餐廳"
+
         fetch_count = min(req.spinCount + 10, 20)
-        payload = {"textQuery": f"{query_str} 餐廳", "maxResultCount": fetch_count, "languageCode": "zh-TW", "locationBias": {"circle": {"center": {"latitude": req.lat, "longitude": req.lng}, "radius": float(req.distance)}}}
+        
+        # 組合 Google API Payload
+        payload = {
+            "textQuery": query_str, 
+            "maxResultCount": fetch_count, 
+            "languageCode": "zh-TW", 
+            "locationBias": {
+                "circle": {
+                    "center": {"latitude": req.lat, "longitude": req.lng}, 
+                    "radius": float(req.distance)
+                }
+            }
+        }
+        
         if req.openNow: payload["openNow"] = True
         if req.highRating: payload["minRating"] = 4.0
 
         async with httpx.AsyncClient() as client:
             resp = await client.post("https://places.googleapis.com/v1/places:searchText", json=payload, headers=headers)
+            
             if resp.status_code == 200:
                 places_data = resp.json().get("places", [])
                 for p in places_data:
                     loc = p.get("location", {})
-                    sql = text("INSERT INTO restaurants (google_place_id, name, type, rating, price_level, opening_hours, geom) VALUES (:place_id, :name, :type, :rating, :price_level, :opening_hours, ST_SetSRID(ST_MakePoint(:lng, :lat), 4326)) ON CONFLICT (google_place_id) DO NOTHING;")
-                    await db.execute(sql, {"place_id": p.get("id"), "name": p.get("displayName", {}).get("text"), "type": p.get("types", ["restaurant"])[0], "rating": p.get("rating", 0.0), "price_level": p.get("priceLevel"), "opening_hours": json.dumps(p.get("regularOpeningHours", {}), ensure_ascii=False), "lng": loc.get("longitude"), "lat": loc.get("latitude")})
+                    sql = text("""
+                        INSERT INTO restaurants (google_place_id, name, type, rating, price_level, opening_hours, geom) 
+                        VALUES (:place_id, :name, :type, :rating, :price_level, :opening_hours, ST_SetSRID(ST_MakePoint(:lng, :lat), 4326)) 
+                        ON CONFLICT (google_place_id) DO NOTHING;
+                    """)
+                    await db.execute(sql, {
+                        "place_id": p.get("id"), 
+                        "name": p.get("displayName", {}).get("text"), 
+                        "type": p.get("types", ["restaurant"])[0], 
+                        "rating": p.get("rating", 0.0), 
+                        "price_level": p.get("priceLevel"), 
+                        "opening_hours": json.dumps(p.get("regularOpeningHours", {}), ensure_ascii=False), 
+                        "lng": loc.get("longitude"), 
+                        "lat": loc.get("latitude")
+                    })
                 await db.commit()
 
+        # 3. 從資料庫篩選並回傳 (這部分保持不變)
         user_point = ST_SetSRID(ST_MakePoint(req.lng, req.lat), 4326)
         from sqlalchemy import cast
         from geoalchemy2 import Geography
-        query = select(Restaurant).where(func.ST_DWithin(cast(Restaurant.geom, Geography), cast(user_point, Geography), float(req.distance)))
-        if req.priceLevels: query = query.where(Restaurant.price_level.in_(req.priceLevels))
-        if req.highRating: query = query.where(Restaurant.rating >= 4.0)
+        
+        query = select(Restaurant).where(
+            func.ST_DWithin(cast(Restaurant.geom, Geography), cast(user_point, Geography), float(req.distance))
+        )
+        if req.priceLevels: 
+            query = query.where(Restaurant.price_level.in_(req.priceLevels))
+        if req.highRating: 
+            query = query.where(Restaurant.rating >= 4.0)
 
         db_result = await db.execute(query)
         restaurants = db_result.scalars().all()
-        formatted_list = [{"id": r.google_place_id, "name": r.name, "type": r.type, "rating": float(r.rating), "priceLevel": r.price_level, "openingHours": json.loads(r.opening_hours) if r.opening_hours else None} for r in restaurants]
-        if not formatted_list: return {"status": "success", "results": [{"name": "太挑剔囉！附近沒找到符合的餐廳", "type": "N/A", "rating": 0}]}
+        
+        formatted_list = [
+            {
+                "id": r.google_place_id, 
+                "name": r.name, 
+                "type": r.type, 
+                "rating": float(r.rating), 
+                "priceLevel": r.price_level, 
+                "openingHours": json.loads(r.opening_hours) if r.opening_hours else None
+            } for r in restaurants
+        ]
+        
+        if not formatted_list: 
+            return {"status": "success", "results": [{"name": "太挑剔囉！附近沒找到符合的店家", "type": "N/A", "rating": 0}]}
         
         return {"status": "success", "results": random.sample(formatted_list, min(len(formatted_list), req.spinCount))}
+        
     except Exception as e:
         print(f"後端錯誤: {str(e)}")
         raise HTTPException(status_code=500, detail="Internal Server Error")

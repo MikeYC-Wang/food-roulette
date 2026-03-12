@@ -1,7 +1,6 @@
 <template>
   <div class="app-container bg-bento-bg relative">
     <header class="pt-4 text-center flex flex-col items-center z-10 w-full">
-      
       <h1 class="flex justify-center w-full px-4">
         <img :src="logoImg" alt="食來運轉" class="h-[13rem] object-contain drop-shadow-sm" />
       </h1>
@@ -55,21 +54,26 @@
       </button>
     </main>
 
-    <footer class="fixed bottom-8 left-1/2 transform -translate-x-1/2 bg-white border-[3px] border-gray-800 rounded-full px-10 py-3 flex justify-center items-center gap-14 z-40" style="box-shadow: 4px 4px 0px 0px rgba(31, 41, 55, 1); width: max-content;">
-      
-      <button @click="openAppropriateDrawer" class="text-3xl text-bento-secondary hover:scale-110 transition-transform active:scale-95 drop-shadow-sm">
-        <i :class="isCustomMode ? 'fa-solid fa-pen-to-square' : 'fa-solid fa-filter'"></i>
-      </button>
+    <footer class="fixed bottom-8 left-1/2 transform -translate-x-1/2 bg-white border-[3px] border-gray-800 rounded-full px-8 py-3 flex justify-center items-center gap-10 z-40" style="box-shadow: 4px 4px 0px 0px rgba(31, 41, 55, 1); width: max-content;">
+        
+        <button @click="openAppropriateDrawer" class="text-3xl text-bento-secondary hover:scale-110 transition-transform active:scale-95 drop-shadow-sm">
+            <i :class="isCustomMode ? 'fa-solid fa-pen-to-square' : 'fa-solid fa-filter'"></i>
+        </button>
 
-      <button @click="handleUserIconClick" class="text-3xl text-gray-700 relative hover:scale-110 transition-transform active:scale-95 drop-shadow-sm">
-        <i class="fa-solid fa-user"></i>
-        <span v-if="isLoggedIn" class="absolute -top-1 -right-2 block h-4 w-4 rounded-full bg-green-500 border-2 border-white"></span>
-      </button>
-      
-      <button @click="isLocationDrawerOpen = true" class="text-3xl text-bento-primary hover:scale-110 transition-transform active:scale-95 drop-shadow-sm">
-        <i class="fa-solid fa-map-location-dot"></i>
-      </button>
+        <button @click="toggleDrinkMode" 
+                class="text-3xl hover:scale-110 transition-transform active:scale-95 drop-shadow-sm"
+                :class="isDrinkMode ? 'text-blue-500' : 'text-gray-400'">
+            <i class="fa-solid fa-glass-water"></i>
+        </button>
+        
+        <button @click="isLocationDrawerOpen = true" class="text-3xl text-bento-primary hover:scale-110 transition-transform active:scale-95 drop-shadow-sm">
+            <i class="fa-solid fa-map-location-dot"></i>
+        </button>
 
+        <button @click="handleUserIconClick" class="text-3xl text-gray-700 relative hover:scale-110 transition-transform active:scale-95 drop-shadow-sm">
+            <i class="fa-solid fa-user"></i>
+            <span v-if="isLoggedIn" class="absolute -top-1 -right-2 block h-4 w-4 rounded-full bg-green-500 border-2 border-white"></span>
+        </button>
     </footer>
 
     <div v-if="showResult" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 backdrop-blur-sm transition-opacity">
@@ -77,70 +81,42 @@
         <div class="w-20 h-20 mx-auto bg-bento-primary rounded-full flex items-center justify-center -mt-16 mb-4 shadow-lg border-4 border-white">
           <i class="fa-solid fa-utensils text-4xl text-white"></i>
         </div>
-
         <div class="text-center">
           <div class="flex items-center justify-center gap-3 mb-2">
-            <h2 class="text-2xl font-black text-gray-800 leading-tight">
-              {{ selectedFood?.name }}
-            </h2>
-            <button 
-              v-if="selectedFood?.id && !isCustomMode" 
-              @click="toggleFavorite"
-              class="text-3xl transition-transform active:scale-75 focus:outline-none drop-shadow-sm"
-              :class="favoriteIds.includes(selectedFood.id) ? 'text-red-500' : 'text-gray-300 hover:text-red-400'"
-            >
+            <h2 class="text-2xl font-black text-gray-800 leading-tight">{{ selectedFood?.name }}</h2>
+            <button v-if="selectedFood?.id && !isCustomMode" @click="toggleFavorite" class="text-3xl transition-transform active:scale-75 focus:outline-none drop-shadow-sm" :class="favoriteIds.includes(selectedFood.id) ? 'text-red-500' : 'text-gray-300 hover:text-red-400'">
               <i class="fa-solid fa-heart"></i>
             </button>
           </div>
-          
           <template v-if="!isCustomMode && selectedFood?.type !== 'N/A'">
             <div class="flex items-center justify-center space-x-3 text-sm mb-3">
-              <span class="bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full font-bold flex items-center shadow-sm">
-                <i class="fa-solid fa-star mr-1"></i> {{ selectedFood?.rating || '無評分' }}
-              </span>
-              <span class="bg-gray-100 text-gray-600 px-3 py-1 rounded-full font-medium shadow-sm capitalize">
-                {{ formatType(selectedFood?.type) }}
-              </span>
+              <span class="bg-yellow-100 text-yellow-700 px-3 py-1 rounded-full font-bold flex items-center shadow-sm"><i class="fa-solid fa-star mr-1"></i> {{ selectedFood?.rating || '無評分' }}</span>
+              <span class="bg-gray-100 text-gray-600 px-3 py-1 rounded-full font-medium shadow-sm capitalize">{{ formatType(selectedFood?.type) }}</span>
             </div>
-
             <div class="flex items-center justify-center space-x-2 text-sm mb-6">
-              <span class="text-green-700 font-bold bg-green-50 px-3 py-1.5 rounded-full shadow-sm border border-green-100">
-                {{ formatPrice(selectedFood?.priceLevel) }}
-              </span>
-              
-              <span v-if="selectedFood?.openingHours" 
-                    class="font-bold px-3 py-1.5 rounded-full shadow-sm border"
-                    :class="selectedFood.openingHours.openNow ? 'bg-blue-50 text-blue-700 border-blue-100' : 'bg-red-50 text-red-600 border-red-100'">
-                <i class="fa-solid fa-clock mr-1"></i> 
-                {{ selectedFood.openingHours.openNow ? '營業中' : '休息中' }}
+              <span class="text-green-700 font-bold bg-green-50 px-3 py-1.5 rounded-full shadow-sm border border-green-100">{{ formatPrice(selectedFood?.priceLevel) }}</span>
+              <span v-if="selectedFood?.openingHours" class="font-bold px-3 py-1.5 rounded-full shadow-sm border" :class="selectedFood.openingHours.openNow ? 'bg-blue-50 text-blue-700 border-blue-100' : 'bg-red-50 text-red-600 border-red-100'">
+                <i class="fa-solid fa-clock mr-1"></i> {{ selectedFood.openingHours.openNow ? '營業中' : '休息中' }}
               </span>
             </div>
           </template>
-
           <template v-else-if="isCustomMode">
             <p class="text-gray-500 font-bold mb-6 text-sm">🎊 自訂口袋名單轉出結果！</p>
           </template>
         </div>
-
         <div class="flex flex-col space-y-3 mt-2">
-          <a v-if="selectedFood?.id && !isCustomMode" :href="`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedFood.name)}&query_place_id=${selectedFood.id}`" target="_blank" rel="noopener noreferrer" class="w-full bg-bento-primary text-white font-bold py-3 px-6 rounded-xl hover:bg-opacity-90 transition-all flex items-center justify-center shadow-md">
+          <a v-if="selectedFood?.id && !isCustomMode" :href="`http://googleusercontent.com/maps.google.com/${encodeURIComponent(selectedFood.name)}&query_place_id=${selectedFood.id}`" target="_blank" rel="noopener noreferrer" class="w-full bg-bento-primary text-white font-bold py-3 px-6 rounded-xl hover:bg-opacity-90 transition-all flex items-center justify-center shadow-md">
             <i class="fa-solid fa-map-location-dot mr-2"></i> 帶我去吃！
           </a>
-          
           <div class="flex gap-3 w-full">
-            <button @click="shareResult" class="flex-1 bg-blue-50 text-blue-600 font-bold py-3 px-4 rounded-xl hover:bg-blue-100 transition-all flex items-center justify-center shadow-sm border border-blue-100">
-              <i class="fa-solid fa-share-nodes mr-2"></i> 分享
-            </button>
-            <button @click="closeResult" class="flex-1 bg-gray-100 text-gray-700 font-bold py-3 px-4 rounded-xl hover:bg-gray-200 transition-all flex items-center justify-center shadow-sm">
-              <i class="fa-solid fa-rotate-right mr-2"></i> 再轉一次
-            </button>
+            <button @click="shareResult" class="flex-1 bg-blue-50 text-blue-600 font-bold py-3 px-4 rounded-xl hover:bg-blue-100 transition-all flex items-center justify-center shadow-sm border border-blue-100"><i class="fa-solid fa-share-nodes mr-2"></i> 分享</button>
+            <button @click="closeResult" class="flex-1 bg-gray-100 text-gray-700 font-bold py-3 px-4 rounded-xl hover:bg-gray-200 transition-all flex items-center justify-center shadow-sm"><i class="fa-solid fa-rotate-right mr-2"></i> 再轉一次</button>
           </div>
         </div>
-
       </div>
     </div>
 
-    <FilterDrawer v-model:isOpen="isFilterOpen" @apply="handleApplyFilters" />
+    <FilterDrawer v-model:isOpen="isFilterOpen" :isDrinkMode="isDrinkMode" @apply="handleApplyFilters" />
     <CustomListDrawer v-model:isOpen="isCustomDrawerOpen" :initialList="customList" @apply="handleApplyCustomList" />
     <LocationDrawer v-model:isOpen="isLocationDrawerOpen" :currentLat="location.lat" :currentLng="location.lng" @apply-location="handleApplyLocation" />
   </div>
@@ -165,21 +141,53 @@ import food3 from '../assets/food3.png';
 import food4 from '../assets/food4.png';
 import food5 from '../assets/food5.png';
 
+// --- 基礎狀態 ---
+const router = useRouter();
+const { location, getLocation } = useLocation();
+const rouletteRef = ref<InstanceType<typeof Roulette> | null>(null);
+
 const isLocationDrawerOpen = ref(false);
+const isSpinning = ref(false);
+const showResult = ref(false);
+const selectedFood = ref<RestaurantInfo | null>(null);
+const hasFetchedData = ref(false);
 
-const handleApplyLocation = async (newLoc: any) => {
-  location.value.lat = newLoc.lat;
-  location.value.lng = newLoc.lng;
-  location.value.message = newLoc.name;
-  location.value.status = 'success';
-  
-  if (!isCustomMode.value) {
-    hasFetchedData.value = false;
-    showResult.value = false;
-    await fetchRestaurants();
+const isFilterOpen = ref(false);
+const isCustomDrawerOpen = ref(false);
+const isCustomMode = ref(false);
+const isDrinkMode = ref(false); 
+
+const customList = ref<string[]>([]);
+const favoriteIds = ref<string[]>([]);
+
+const currentFilters = ref({
+  distance: 500, 
+  types: [] as string[], 
+  features: [] as string[], 
+  priceLevels: [] as string[],
+  spinCount: 6, 
+  openNow: true, 
+  highRating: false 
+});
+
+const foodImages = [food1, food2, food3, food4, food5];
+const currentFoodIndex = ref(0);
+let foodInterval: ReturnType<typeof setInterval>;
+
+// --- 計算屬性 ---
+const statusIconClass = computed(() => {
+  switch (location.value.status) {
+    case 'loading': return 'fa-solid fa-circle-notch fa-spin text-gray-400';
+    case 'success': return 'fa-solid fa-location-dot text-bento-secondary';
+    case 'default': return 'fa-solid fa-map-pin text-bento-primary';
+    case 'error': return 'fa-solid fa-circle-exclamation text-bento-accent';
+    default: return 'fa-solid fa-location-crosshairs';
   }
-};
+});
 
+const isLoggedIn = computed(() => !!localStorage.getItem('token'));
+
+// --- 格式化工具 ---
 interface RestaurantInfo {
   id?: string;
   name: string;
@@ -202,67 +210,26 @@ const formatType = (t?: string) => {
   return t ? (map[t] || t) : '美食';
 };
 
-const router = useRouter();
-const { location, getLocation } = useLocation();
-const rouletteRef = ref<InstanceType<typeof Roulette> | null>(null);
+// --- 核心功能函式 ---
 
-const isSpinning = ref(false);
-const showResult = ref(false);
-const selectedFood = ref<RestaurantInfo | null>(null);
-const hasFetchedData = ref(false);
-
-const isFilterOpen = ref(false);
-const isCustomDrawerOpen = ref(false);
-const isCustomMode = ref(false);
-const customList = ref<string[]>([]);
-const favoriteIds = ref<string[]>([]);
-
-const currentFilters = ref({
-  distance: 500, types: [] as string[], features: [] as string[], priceLevels: [] as string[],
-  spinCount: 6, openNow: true, highRating: false 
-});
-
-const foodImages = [food1, food2, food3, food4, food5];
-const currentFoodIndex = ref(0);
-let foodInterval: ReturnType<typeof setInterval>;
-
-const statusIconClass = computed(() => {
-  switch (location.value.status) {
-    case 'loading': return 'fa-solid fa-circle-notch fa-spin text-gray-400';
-    case 'success': return 'fa-solid fa-location-dot text-bento-secondary';
-    case 'default': return 'fa-solid fa-map-pin text-bento-primary';
-    case 'error': return 'fa-solid fa-circle-exclamation text-bento-accent';
-    default: return 'fa-solid fa-location-crosshairs';
-  }
-});
-
-const switchMode = (toCustom: boolean) => {
-  isCustomMode.value = toCustom;
-  hasFetchedData.value = false;
-  if (rouletteRef.value) {
-    rouletteRef.value.setOptions([{ name: '等待設定中...', type: 'N/A', rating: 0 }]);
-  }
-};
-
-const openAppropriateDrawer = () => {
-  if (isCustomMode.value) {
-    isCustomDrawerOpen.value = true;
-  } else {
-    isFilterOpen.value = true;
-  }
-};
-
+// 1. 抓取餐廳列表
 const fetchRestaurants = async () => {
+  if (!location.value.lat) {
+    toast.error('尚未取得定位資料');
+    return;
+  }
   try {
     const response = await api.post('/api/spin', {
-      lat: location.value.lat, lng: location.value.lng,
+      lat: location.value.lat,
+      lng: location.value.lng,
       distance: currentFilters.value.distance,
       types: currentFilters.value.types, 
       features: currentFilters.value.features,
       priceLevels: currentFilters.value.priceLevels,
       spinCount: currentFilters.value.spinCount,
       openNow: currentFilters.value.openNow,
-      highRating: currentFilters.value.highRating
+      highRating: currentFilters.value.highRating,
+      isDrinkMode: isDrinkMode.value // 👉 傳遞模式給後端
     });
 
     if (response.data.status === 'success' && rouletteRef.value) {
@@ -270,9 +237,58 @@ const fetchRestaurants = async () => {
       hasFetchedData.value = true; 
     }
   } catch (error) {
-    console.error('抓取餐廳名單失敗:', error);
+    console.error('抓取名單失敗:', error);
+    toast.error('無法取得名單，請確認篩選條件或網路狀態');
   }
 };
+
+// 2. 切換模式 (附近探索/自訂名單)
+const switchMode = (toCustom: boolean) => {
+  isCustomMode.value = toCustom;
+  if (toCustom) isDrinkMode.value = false; 
+  hasFetchedData.value = false; // 👉 重置，要求使用者重新設定
+  if (rouletteRef.value) {
+    rouletteRef.value.setOptions([{ name: '等待設定中...', type: 'N/A', rating: 0 }]);
+  }
+};
+
+// 3. 切換飲料模式
+const toggleDrinkMode = async () => {
+  if (isCustomMode.value) {
+    isCustomMode.value = false; 
+  }
+  
+  isDrinkMode.value = !isDrinkMode.value;
+  hasFetchedData.value = false; // 👉 重要：切換模式後要求重新設定，不自動抓取
+  showResult.value = false;
+
+  if (isDrinkMode.value) {
+    toast.success('已開啟飲料模式！請點擊篩選設定條件');
+  } else {
+    toast.info('已回到美食模式');
+  }
+  
+  if (rouletteRef.value) {
+    rouletteRef.value.setOptions([{ name: '等待模式設定...', type: 'N/A', rating: 0 }]);
+  }
+};
+
+// 4. 處理位置更新
+const handleApplyLocation = async (newLoc: any) => {
+  location.value.lat = newLoc.lat;
+  location.value.lng = newLoc.lng;
+  location.value.message = newLoc.name;
+  location.value.status = 'success';
+  
+  hasFetchedData.value = false; // 👉 更改位置後要求重新設定，不自動抓取
+  showResult.value = false;
+  
+  if (rouletteRef.value) {
+    rouletteRef.value.setOptions([{ name: '地點已變更，請重新設定...', type: 'N/A', rating: 0 }]);
+  }
+};
+
+// --- 其他 API 互動 ---
 
 const fetchCustomList = async () => {
   if (localStorage.getItem('token')) {
@@ -300,18 +316,15 @@ const fetchFavorites = async () => {
 
 const toggleFavorite = async () => {
   if (!selectedFood.value || !selectedFood.value.id || isCustomMode.value) return;
-  
   if (!localStorage.getItem('token')) {
     toast.info("請先登入才能收藏餐廳喔！");
     return;
   }
-  
   try {
     const res = await api.post('/api/favorites/toggle', {
       restaurant_name: selectedFood.value.name,
       google_place_id: selectedFood.value.id
     });
-    
     if (res.data.status === 'added') {
       favoriteIds.value.push(selectedFood.value.id);
       toast.success('已加入我的最愛！');
@@ -323,46 +336,7 @@ const toggleFavorite = async () => {
   }
 };
 
-onMounted(() => {
-  getLocation();
-  fetchCustomList();
-  fetchFavorites();
-
-  foodInterval = setInterval(() => {
-    currentFoodIndex.value = (currentFoodIndex.value + 1) % foodImages.length;
-  }, 3500);
-});
-
-onUnmounted(() => {
-  if (foodInterval) clearInterval(foodInterval);
-});
-
-const handleApplyFilters = async (filters: any) => {
-  currentFilters.value = filters;
-  showResult.value = false;
-  await fetchRestaurants();
-};
-
-const handleApplyCustomList = async (newList: string[]) => {
-  customList.value = newList;
-  
-  if (rouletteRef.value && newList.length > 0) {
-    const formattedList = newList.map(name => ({
-      name: name,
-      type: 'custom'
-    }));
-    rouletteRef.value.setOptions(formattedList);
-    hasFetchedData.value = true;
-  }
-
-  if (localStorage.getItem('token')) {
-    try {
-      await api.post('/api/custom-list', { restaurants: newList });
-    } catch (error) {
-      console.error('儲存自訂名單失敗', error);
-    }
-  }
-};
+// --- 轉盤事件 ---
 
 const triggerSpin = async () => {
   if (isSpinning.value || !rouletteRef.value) return;
@@ -398,7 +372,7 @@ const handleSpinEnd = async (result: RestaurantInfo) => {
 
 const closeResult = () => showResult.value = false;
 
-const isLoggedIn = ref(!!localStorage.getItem('token'));
+// --- 導覽與 UI 事件 ---
 
 const handleUserIconClick = () => {
   if (localStorage.getItem('token')) {
@@ -408,16 +382,42 @@ const handleUserIconClick = () => {
   }
 };
 
+const openAppropriateDrawer = () => {
+  if (isCustomMode.value) {
+    isCustomDrawerOpen.value = true;
+  } else {
+    isFilterOpen.value = true;
+  }
+};
+
+const handleApplyFilters = async (filters: any) => {
+  currentFilters.value = filters;
+  showResult.value = false;
+  await fetchRestaurants(); // 👈 只有這裡會觸發資料抓取
+};
+
+const handleApplyCustomList = async (newList: string[]) => {
+  customList.value = newList;
+  if (rouletteRef.value && newList.length > 0) {
+    const formattedList = newList.map(name => ({ name, type: 'custom' }));
+    rouletteRef.value.setOptions(formattedList);
+    hasFetchedData.value = true;
+  }
+  if (localStorage.getItem('token')) {
+    try {
+      await api.post('/api/custom-list', { restaurants: newList });
+    } catch (error) {
+      console.error('儲存自訂名單失敗', error);
+    }
+  }
+};
+
 const shareResult = async () => {
   if (!selectedFood.value) return;
-
   const restaurantName = selectedFood.value.name;
   const placeId = selectedFood.value.id || ''; 
-
   let mapUrl = `http://googleusercontent.com/maps.google.com/${encodeURIComponent(restaurantName)}`; 
-  if (placeId) {
-    mapUrl += `&query_place_id=${placeId}`;
-  }
+  if (placeId) mapUrl += `&query_place_id=${placeId}`;
 
   const shareData = {
     title: '食來運轉 - 今晚吃這個！',
@@ -426,21 +426,33 @@ const shareResult = async () => {
   };
 
   if (navigator.share) {
-    try {
-      await navigator.share(shareData);
-    } catch (error) {
-      console.log('使用者取消分享或分享失敗', error);
-    }
+    try { await navigator.share(shareData); } 
+    catch (error) { console.log('使用者取消分享或分享失敗', error); }
   } else {
     try {
       await navigator.clipboard.writeText(`${shareData.text}\n${shareData.url}`);
-      toast.success('餐廳資訊已複製到剪貼簿！可以直接貼給朋友囉～'); 
+      toast.success('餐廳資訊已複製到剪貼簿！'); 
     } catch (error) {
-      console.error('複製失敗', error);
-      toast.error('抱歉，分享功能目前無法使用。');
+      toast.error('分享失敗');
     }
   }
 };
+
+// --- 生命週期 ---
+
+onMounted(() => {
+  getLocation();
+  fetchCustomList();
+  fetchFavorites();
+
+  foodInterval = setInterval(() => {
+    currentFoodIndex.value = (currentFoodIndex.value + 1) % foodImages.length;
+  }, 3500);
+});
+
+onUnmounted(() => {
+  if (foodInterval) clearInterval(foodInterval);
+});
 </script>
 
 <style src="../style/APP.css" scoped></style>

@@ -45,7 +45,7 @@ interface RouletteOption {
   rating?: number;
 }
 
-const options = ref<RouletteOption[]>([{ name: '載入中...' }]);
+const options = ref<RouletteOption[]>([{ name: '等待設定中...' }]);
 const wheelRotation = ref(0);
 const isSpinning = ref(false);
 const emit = defineEmits<{
