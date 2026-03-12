@@ -8,9 +8,23 @@
     <div class="w-full max-w-md bg-white rounded-3xl p-8 border-4 border-gray-800 relative z-10 flex flex-col max-h-[90vh]" style="box-shadow: 8px 8px 0px 0px rgba(31, 41, 55, 1);">
       
       <div class="text-center mb-6 flex-shrink-0">
-        <div class="w-20 h-20 mx-auto bg-bento-primary rounded-full flex items-center justify-center border-4 border-gray-800 mb-2" style="box-shadow: 4px 4px 0px 0px rgba(31, 41, 55, 1);">
-          <i class="fa-solid fa-user text-3xl text-white"></i>
+        <input type="file" ref="fileInput" @change="handleFileUpload" accept="image/*" class="hidden" />
+
+        <div @click="triggerFileInput" 
+             class="w-24 h-24 mx-auto bg-bento-primary rounded-full flex items-center justify-center border-4 border-gray-800 mb-2 relative cursor-pointer overflow-hidden group transition-transform hover:scale-105" >
+          
+          <img v-if="userInfo.avatar_url" :src="userInfo.avatar_url" class="w-full h-full object-cover" alt="User Avatar" />
+          <i v-else class="fa-solid fa-user text-4xl text-white"></i>
+
+          <div v-if="isUploadingAvatar" class="absolute inset-0 bg-black/50 flex items-center justify-center">
+            <i class="fa-solid fa-circle-notch fa-spin text-white text-2xl"></i>
+          </div>
+
+          <div v-else class="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+            <i class="fa-solid fa-camera text-white text-2xl"></i>
+          </div>
         </div>
+        
         <h2 class="text-3xl font-black text-gray-800 tracking-wider">個人資料</h2>
       </div>
 
@@ -44,7 +58,7 @@
           </button>
         </div>
 
-<div class="flex flex-col flex-1 min-h-0">
+        <div class="flex flex-col flex-1 min-h-0">
           
           <div v-if="activeTab === 'history'" class="flex flex-col flex-1 min-h-0">
             <div v-if="spinHistory.length === 0" class="bg-gray-50 text-center py-6 rounded-xl border-2 border-gray-200 text-gray-500 font-bold flex-shrink-0">
@@ -100,15 +114,20 @@ import axios from 'axios';
 
 const router = useRouter();
 const isLoading = ref(true);
-const activeTab = ref('history'); // 控制目前顯示哪一個分頁
+const activeTab = ref('history');
+
+// 新增上傳大頭貼相關 ref
+const fileInput = ref<HTMLInputElement | null>(null);
+const isUploadingAvatar = ref(false);
 
 const userInfo = ref({
   username: '',
   email: '',
-  created_at: ''
+  created_at: '',
+  avatar_url: '' // 加上 avatar_url
 });
 const spinHistory = ref<any[]>([]);
-const favoriteList = ref<any[]>([]); // 存放我的最愛清單
+const favoriteList = ref<any[]>([]); 
 
 onMounted(async () => {
   const token = localStorage.getItem('token');
@@ -118,7 +137,6 @@ onMounted(async () => {
   }
 
   try {
-    // 一次打三支 API 拿取個人資料、歷史紀錄、我的最愛
     const [userRes, historyRes, favRes] = await Promise.all([
       axios.get('http://127.0.0.1:8001/api/me', { headers: { Authorization: `Bearer ${token}` } }),
       axios.get('http://127.0.0.1:8001/api/history', { headers: { Authorization: `Bearer ${token}` } }),
@@ -137,6 +155,57 @@ onMounted(async () => {
     isLoading.value = false;
   }
 });
+
+// 點擊大頭貼觸發隱藏的 file input
+const triggerFileInput = () => {
+  if (!isUploadingAvatar.value) {
+    fileInput.value?.click();
+  }
+};
+
+// 處理上傳邏輯
+const handleFileUpload = async (event: Event) => {
+  const target = event.target as HTMLInputElement;
+  
+  // 使用可選串連運算子 (?.) 安全地取值
+  const file = target.files?.[0];
+
+  // 讓 TypeScript 100% 確定 file 存在
+  if (!file) return;
+
+  // 基本格式防呆
+  if (!file.type.startsWith('image/')) {
+    alert('請上傳圖片檔案！');
+    target.value = ''; // 清空 input
+    return;
+  }
+
+  // 包裝成 FormData 準備傳給後端
+  const formData = new FormData();
+  formData.append('file', file); // 此時 TypeScript 已經確信 file 不是 undefined 了！
+
+  isUploadingAvatar.value = true;
+
+  try {
+    const token = localStorage.getItem('token');
+    const res = await axios.post('http://127.0.0.1:8001/api/user/upload-avatar', formData, {
+      headers: {
+        'Authorization': `Bearer ${token}`,
+        'Content-Type': 'multipart/form-data'
+      }
+    });
+    
+    // 成功後，即時更新畫面上的大頭貼
+    userInfo.value.avatar_url = res.data.avatar_url;
+    
+  } catch (error) {
+    console.error('上傳大頭貼失敗', error);
+    alert('大頭貼上傳失敗，請稍後再試');
+  } finally {
+    isUploadingAvatar.value = false;
+    target.value = ''; // 無論成功失敗都清空 input，讓使用者下次還能選同一張圖
+  }
+};
 
 const handleLogout = () => {
   localStorage.removeItem('token');
