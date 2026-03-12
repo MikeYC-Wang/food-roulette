@@ -148,6 +148,7 @@
 import { ref, onMounted, computed, onUnmounted } from 'vue'; 
 import { useRouter } from 'vue-router';
 import axios from 'axios';
+import confetti from 'canvas-confetti';
 import Roulette from '../components/Roulette.vue';
 import FilterDrawer from '../components/FilterDrawer.vue';
 import CustomListDrawer from '../components/CustomListDrawer.vue';
@@ -386,6 +387,15 @@ const handleSpinEnd = async (result: RestaurantInfo) => {
   isSpinning.value = false;
   selectedFood.value = result;
   showResult.value = true;
+
+  // 觸發紙碎噴發動畫
+  confetti({
+    particleCount: 150,           // 紙碎的數量
+    spread: 80,                   // 噴發的散開角度
+    origin: { y: 0.55 },          // 從畫面哪個高度噴發 (0 是最頂端，1 是最底端。0.55 大約在彈窗位置)
+    zIndex: 9999,                 // 確保紙碎會蓋在黑色半透明遮罩 (z-50) 的最上面
+    colors: ['#E9C46A', '#2A9D8F', '#E76F51', '#A8DADC', '#4285F4'] // 偷偷加入配合你 App 風格的顏色
+  });
 
   const token = localStorage.getItem('token');
   if (token && result) {
