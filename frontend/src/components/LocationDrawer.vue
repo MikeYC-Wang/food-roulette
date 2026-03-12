@@ -21,6 +21,14 @@
                </div>
                <i class="fa-solid fa-location-dot text-4xl text-bento-accent drop-shadow-[0_4px_2px_rgba(0,0,0,0.5)]"></i>
              </div>
+
+             <button 
+               @click="resetToCurrentLocation"
+               class="absolute bottom-4 right-4 z-20 bg-white w-12 h-12 rounded-full border-2 border-gray-800 flex items-center justify-center text-xl text-bento-primary transition-transform active:scale-90 hover:bg-gray-50"
+               style="box-shadow: 2px 2px 0px 0px rgba(31, 41, 55, 1);"
+             >
+               <i class="fa-solid fa-location-crosshairs"></i>
+             </button>
           </div>
 
           <div class="flex flex-col gap-2 flex-shrink-0 mt-2 relative">
@@ -170,5 +178,21 @@ const applyNewLocation = () => {
     name: currentLocName.value
   });
   closeDrawer();
+};
+
+// 一鍵回到真實 GPS 定位
+const resetToCurrentLocation = () => {
+  // 把資料重置回父層傳進來的真實座標
+  centerLatLng.value = { lat: props.currentLat, lng: props.currentLng };
+  currentLocName.value = '目前定位點';
+  searchQuery.value = '';
+  searchResults.value = [];
+  
+  if (mapInstance) {
+    // 使用 leaflet 原生的 flyTo 讓畫面「平滑飛回去」，視覺效果超讚！
+    mapInstance.flyTo([props.currentLat, props.currentLng], 16, {
+      duration: 1.5 // 飛行動畫持續 1.5 秒
+    });
+  }
 };
 </script>
