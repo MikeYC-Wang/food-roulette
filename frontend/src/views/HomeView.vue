@@ -27,7 +27,7 @@
       </div>
     </header>
 
-    <main class="flex-1 flex flex-col items-center justify-start pt-6 w-full px-4 z-20">
+    <main class="flex-1 flex flex-col items-center justify-start pt-6 pb-28 w-full px-4 z-20">
       <Roulette ref="rouletteRef" @spin-end="handleSpinEnd" />
       
       <div class="bg-gray-200 rounded-full p-1 mt-6 flex relative w-64 border-2 border-gray-800" style="box-shadow: 2px 2px 0px 0px rgba(31, 41, 55, 1);">
@@ -55,19 +55,21 @@
       </button>
     </main>
 
-    <footer class="pb-12 pt-6 flex justify-center gap-16 w-full relative z-20">
-      <button @click="openAppropriateDrawer" class="bottom-icon-btn text-bento-secondary">
+    <footer class="fixed bottom-8 left-1/2 transform -translate-x-1/2 bg-white border-[3px] border-gray-800 rounded-full px-10 py-3 flex justify-center items-center gap-14 z-40" style="box-shadow: 4px 4px 0px 0px rgba(31, 41, 55, 1); width: max-content;">
+      
+      <button @click="openAppropriateDrawer" class="text-3xl text-bento-secondary hover:scale-110 transition-transform active:scale-95 drop-shadow-sm">
         <i :class="isCustomMode ? 'fa-solid fa-pen-to-square' : 'fa-solid fa-filter'"></i>
       </button>
 
-      <button @click="handleUserIconClick" class="bottom-icon-btn text-gray-700 relative">
+      <button @click="handleUserIconClick" class="text-3xl text-gray-700 relative hover:scale-110 transition-transform active:scale-95 drop-shadow-sm">
         <i class="fa-solid fa-user"></i>
-        <span v-if="isLoggedIn" class="absolute top-0 right-0 block h-3 w-3 rounded-full bg-green-500 ring-2 ring-white"></span>
+        <span v-if="isLoggedIn" class="absolute -top-1 -right-2 block h-4 w-4 rounded-full bg-green-500 border-2 border-white"></span>
       </button>
       
-      <button @click="isLocationDrawerOpen = true" class="bottom-icon-btn text-bento-primary">
+      <button @click="isLocationDrawerOpen = true" class="text-3xl text-bento-primary hover:scale-110 transition-transform active:scale-95 drop-shadow-sm">
         <i class="fa-solid fa-map-location-dot"></i>
       </button>
+
     </footer>
 
     <div v-if="showResult" class="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-60 backdrop-blur-sm transition-opacity">
