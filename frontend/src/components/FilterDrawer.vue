@@ -31,12 +31,12 @@
               <i class="fa-solid fa-list-ol mr-2 text-blue-500"></i>要轉幾家餐廳？ (目前: {{ selectedSpinCount }} 家)
             </h3>
             <input 
-              type="range" min="2" max="12" step="1" 
+              type="range" min="2" max="9" step="1" 
               v-model.number="selectedSpinCount" 
               class="w-full h-2 bg-gray-300 rounded-lg appearance-none cursor-pointer accent-bento-primary"
             >
             <div class="flex justify-between text-xs font-bold text-gray-500 mt-2">
-              <span>2 家</span><span>12 家</span>
+              <span>2 家</span><span>9 家</span>
             </div>
           </div>
 

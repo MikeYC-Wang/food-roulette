@@ -18,11 +18,11 @@
               type="text" 
               placeholder="輸入餐廳名稱..." 
               class="flex-1 bg-white border-2 border-gray-800 rounded-xl px-4 py-3 font-bold focus:outline-none focus:border-bento-primary transition-colors"
-              :disabled="customList.length >= 12"
+              :disabled="customList.length >= 9"
             />
             <button 
               @click="addItem" 
-              :disabled="!newItemName.trim() || customList.length >= 12"
+              :disabled="!newItemName.trim() || customList.length >= 9"
               class="bg-bento-primary text-gray-800 font-bold px-4 rounded-xl border-2 border-gray-800 transition-transform active:translate-y-1 active:translate-x-1 disabled:opacity-50"
               style="box-shadow: 2px 2px 0px 0px rgba(31, 41, 55, 1);"
             >
@@ -30,7 +30,7 @@
             </button>
           </div>
 
-          <p class="text-xs text-gray-500 font-bold text-right -mt-2">最多 12 家，目前：{{ customList.length }} 家</p>
+          <p class="text-xs text-gray-500 font-bold text-right -mt-2">最多 9 家，目前：{{ customList.length }} 家</p>
 
           <div class="flex flex-col gap-3 overflow-y-auto flex-1 custom-scrollbar pr-2 min-h-[200px] pt-2 -mt-2">
             <div v-if="customList.length === 0" class="text-center text-gray-400 font-bold py-8">
@@ -80,7 +80,7 @@ watch(() => props.isOpen, (newVal) => {
 });
 
 const addItem = () => {
-  if (newItemName.value.trim() && customList.value.length < 12) {
+  if (newItemName.value.trim() && customList.value.length < 9) {
     customList.value.push(newItemName.value.trim());
     newItemName.value = '';
   }
