@@ -5,10 +5,22 @@
       <i class="fa-solid fa-chevron-left"></i>
     </button>
 
-    <header class="w-full max-w-2xl mx-auto flex items-center justify-center mb-8 mt-2">
-      <h1 class="text-2xl font-black text-gray-800 tracking-widest flex items-center gap-3">
+    <header class="w-full max-w-2xl mx-auto flex flex-col items-center justify-center mb-8 mt-2 relative">
+      <h1 class="text-2xl font-black text-gray-800 tracking-widest flex items-center gap-3 mb-4">
         <i class="fa-solid fa-chart-column text-blue-500"></i> 飲食手札
       </h1>
+      
+      <div class="flex items-center gap-4 bg-white px-5 py-2 rounded-2xl border-2 border-gray-800 relative z-10" style="box-shadow: 2px 2px 0px 0px rgba(31,41,55,1);">
+        <button @click="changeMonth(-1)" class="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:text-gray-800 hover:bg-gray-100 transition-colors active:scale-95">
+          <i class="fa-solid fa-chevron-left"></i>
+        </button>
+        
+        <input type="month" v-model="currentMonthStr" @change="fetchStats" class="font-black text-gray-800 bg-transparent focus:outline-none text-center text-lg tracking-wider cursor-pointer" />
+        
+        <button @click="changeMonth(1)" class="w-8 h-8 rounded-full flex items-center justify-center text-gray-400 hover:text-gray-800 hover:bg-gray-100 transition-colors active:scale-95">
+          <i class="fa-solid fa-chevron-right"></i>
+        </button>
+      </div>
     </header>
 
     <main class="w-full max-w-2xl mx-auto flex flex-col gap-8">
@@ -243,18 +255,38 @@ const initCharts = () => {
 // 抓取資料
 const fetchStats = async () => {
   try {
-    const today = new Date();
-    currentMonthStr.value = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+    if (!currentMonthStr.value) {
+      const today = new Date();
+      currentMonthStr.value = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}`;
+    }
     
+    // 根據目前的月份字串去跟後端要資料
     const res = await api.get(`/api/diet/stats?month=${currentMonthStr.value}`);
     if (res.data.status === 'success') {
       totalSpent.value = res.data.total_spent;
       records.value = res.data.records;
+      // 重新繪製圖表
       nextTick(() => { initCharts(); });
     }
   } catch (error) {
     console.error('取得統計資料失敗', error);
   }
+};
+
+const changeMonth = (offset: number) => {
+  if (!currentMonthStr.value) return;
+  
+  // 👉 加上預設值 = 0，讓 TypeScript 知道它絕對不會是 undefined
+  const [year = 0, month = 0] = currentMonthStr.value.split('-').map(Number);
+  
+  // 利用 Date 物件的特性自動處理跨年問題 (例如 1月減1個月會自動變成去年的12月)
+  const newDate = new Date(year, month - 1 + offset, 1);
+  
+  // 組合回 YYYY-MM 格式
+  currentMonthStr.value = `${newDate.getFullYear()}-${String(newDate.getMonth() + 1).padStart(2, '0')}`;
+  
+  // 呼叫 API 重新畫圖
+  fetchStats();
 };
 
 // 打開新增表單 (自動填入今天日期)
