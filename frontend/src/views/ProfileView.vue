@@ -44,38 +44,38 @@
           </button>
         </div>
 
-        <div class="flex flex-col flex-1 min-h-0">
+<div class="flex flex-col flex-1 min-h-0">
           
-          <div v-if="activeTab === 'history'" class="h-full flex flex-col">
-            <div v-if="spinHistory.length === 0" class="bg-gray-50 text-center py-6 rounded-xl border-2 border-gray-200 text-gray-500 font-bold">
+          <div v-if="activeTab === 'history'" class="flex flex-col flex-1 min-h-0">
+            <div v-if="spinHistory.length === 0" class="bg-gray-50 text-center py-6 rounded-xl border-2 border-gray-200 text-gray-500 font-bold flex-shrink-0">
               還沒有轉過任何餐廳喔！趕快去試試手氣吧！
             </div>
             
-            <div v-else class="flex flex-col gap-3 overflow-y-auto pr-2 pt-2 -mt-2 custom-scrollbar h-full">
-              <div v-for="item in spinHistory" :key="item.id" class="bg-white p-3 rounded-xl border-2 border-gray-800 flex justify-between items-center transition-all duration-200 hover:-translate-y-1 relative z-10 hover:z-50" style="box-shadow: 2px 2px 0px 0px rgba(31, 41, 55, 1);">
+            <div v-else class="flex-1 min-h-0 flex flex-col gap-3 overflow-y-auto pr-2 pt-2 -mt-2 custom-scrollbar">
+              <div v-for="item in spinHistory" :key="item.id" class="bg-white p-3 rounded-xl border-2 border-gray-800 flex justify-between items-center transition-all duration-200 hover:-translate-y-1 relative z-10 hover:z-50 flex-shrink-0" style="box-shadow: 2px 2px 0px 0px rgba(31, 41, 55, 1);">
                 <div class="flex-1 min-w-0 pr-3">
                   <div class="font-bold text-gray-800 text-base truncate">{{ item.restaurant_name }}</div>
                   <div class="text-xs text-gray-500 font-bold mt-1">{{ item.spin_time }}</div>
                 </div>
-                <a v-if="item.google_place_id" :href="`http://googleusercontent.com/maps.google.com/search/?api=1&query=${encodeURIComponent(item.restaurant_name)}&query_place_id=${item.google_place_id}`" target="_blank" class="bg-bento-primary text-white w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 hover:brightness-110 border-2 border-gray-800 transition-colors">
+                <a v-if="item.google_place_id" :href="`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(item.restaurant_name)}&query_place_id=${item.google_place_id}`" target="_blank" class="bg-bento-primary text-white w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 hover:brightness-110 border-2 border-gray-800 transition-colors">
                   <i class="fa-solid fa-map-location-dot"></i>
                 </a>
               </div>
             </div>
           </div>
 
-          <div v-if="activeTab === 'favorites'" class="h-full flex flex-col">
-            <div v-if="favoriteList.length === 0" class="bg-gray-50 text-center py-6 rounded-xl border-2 border-gray-200 text-gray-500 font-bold">
+          <div v-if="activeTab === 'favorites'" class="flex flex-col flex-1 min-h-0">
+            <div v-if="favoriteList.length === 0" class="bg-gray-50 text-center py-6 rounded-xl border-2 border-gray-200 text-gray-500 font-bold flex-shrink-0">
               還沒有收藏餐廳喔！在轉盤結果按下愛心收藏吧！
             </div>
             
-            <div v-else class="flex flex-col gap-3 overflow-y-auto pr-2 pt-2 -mt-2 custom-scrollbar relative h-full">
-              <div v-for="item in favoriteList" :key="item.id" class="bg-white p-3 rounded-xl border-2 border-red-500 flex justify-between items-center transition-all duration-200 hover:-translate-y-1 relative z-10 hover:z-50" style="box-shadow: 2px 2px 0px 0px #ef4444;">
+            <div v-else class="flex-1 min-h-0 flex flex-col gap-3 overflow-y-auto pr-2 pt-2 -mt-2 custom-scrollbar">
+              <div v-for="item in favoriteList" :key="item.id" class="bg-white p-3 rounded-xl border-2 border-red-500 flex justify-between items-center transition-all duration-200 hover:-translate-y-1 relative z-10 hover:z-50 flex-shrink-0" style="box-shadow: 2px 2px 0px 0px #ef4444;">
                 <div class="flex-1 min-w-0 pr-3">
                   <div class="font-bold text-gray-800 text-base truncate">{{ item.restaurant_name }}</div>
                   <div class="text-xs text-gray-500 font-bold mt-1">收藏於: {{ item.created_at.split(' ')[0] }}</div>
                 </div>
-                <a :href="`http://googleusercontent.com/maps.google.com/search/?api=1&query=${encodeURIComponent(item.restaurant_name)}&query_place_id=${item.google_place_id}`" target="_blank" class="bg-red-500 text-white w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 hover:bg-red-600 border-2 border-red-700 transition-colors">
+                <a :href="`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(item.restaurant_name)}&query_place_id=${item.google_place_id}`" target="_blank" class="bg-red-500 text-white w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 hover:bg-red-600 border-2 border-red-700 transition-colors">
                   <i class="fa-solid fa-map-location-dot"></i>
                 </a>
               </div>
