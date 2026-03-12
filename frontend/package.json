@@ -13,7 +13,8 @@
     "axios": "^1.13.6",
     "canvas-confetti": "^1.9.4",
     "vue": "^3.5.25",
-    "vue-router": "^4.6.4"
+    "vue-router": "^4.6.4",
+    "vue3-toastify": "^0.2.9"
   },
   "devDependencies": {
     "@types/canvas-confetti": "^1.9.0",

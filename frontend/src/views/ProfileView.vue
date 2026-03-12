@@ -108,6 +108,7 @@
 </template>
 
 <script setup lang="ts">
+import { toast } from 'vue3-toastify';
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import axios from 'axios';
@@ -175,7 +176,7 @@ const handleFileUpload = async (event: Event) => {
 
   // 基本格式防呆
   if (!file.type.startsWith('image/')) {
-    alert('請上傳圖片檔案！');
+    toast.warning('請上傳圖片檔案！');
     target.value = ''; // 清空 input
     return;
   }
@@ -200,7 +201,7 @@ const handleFileUpload = async (event: Event) => {
     
   } catch (error) {
     console.error('上傳大頭貼失敗', error);
-    alert('大頭貼上傳失敗，請稍後再試');
+    toast.error('大頭貼上傳失敗，請稍後再試');
   } finally {
     isUploadingAvatar.value = false;
     target.value = ''; // 無論成功失敗都清空 input，讓使用者下次還能選同一張圖
@@ -210,7 +211,7 @@ const handleFileUpload = async (event: Event) => {
 const handleLogout = () => {
   localStorage.removeItem('token');
   localStorage.removeItem('username');
-  alert('已成功登出！');
+  toast.success('已成功登出！');
   router.push('/');
 };
 </script>

@@ -145,6 +145,7 @@
 </template>
 
 <script setup lang="ts">
+import { toast } from 'vue3-toastify';
 import { ref, onMounted, computed, onUnmounted } from 'vue'; 
 import { useRouter } from 'vue-router';
 import axios from 'axios';
@@ -308,7 +309,7 @@ const toggleFavorite = async () => {
   
   const token = localStorage.getItem('token');
   if (!token) {
-    alert("請先登入才能收藏餐廳喔！");
+    toast.info("請先登入才能收藏餐廳喔！");
     return;
   }
   
@@ -322,6 +323,7 @@ const toggleFavorite = async () => {
     
     if (res.data.status === 'added') {
       favoriteIds.value.push(selectedFood.value.id);
+      toast.success('已加入我的最愛！');
     } else if (res.data.status === 'removed') {
       favoriteIds.value = favoriteIds.value.filter(id => id !== selectedFood.value?.id);
     }
@@ -426,14 +428,12 @@ const handleUserIconClick = () => {
 
 // 處理分享轉盤結果
 const shareResult = async () => {
-  // 確保有抽獎結果 (將 selectedResult 改為 selectedFood)
   if (!selectedFood.value) return;
 
   const restaurantName = selectedFood.value.name;
-  const placeId = selectedFood.value.id || ''; // 在 RestaurantInfo 介面裡，它是 id，不是 google_place_id
-  
-  // 組合 Google Maps 連結
-  let mapUrl = `https://www.google.com/maps/search/?api=1&query=$${encodeURIComponent(restaurantName)}`; // 修正模板字串的 $ 符號
+  const placeId = selectedFood.value.id || ''; 
+
+  let mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(restaurantName)}`; 
   if (placeId) {
     mapUrl += `&query_place_id=${placeId}`;
   }
@@ -444,7 +444,6 @@ const shareResult = async () => {
     url: mapUrl
   };
 
-  // 檢查瀏覽器是否支援 Web Share API
   if (navigator.share) {
     try {
       await navigator.share(shareData);
@@ -452,13 +451,12 @@ const shareResult = async () => {
       console.log('使用者取消分享或分享失敗', error);
     }
   } else {
-    // 備用方案：如果是在不支援的桌機瀏覽器，直接複製到剪貼簿
     try {
       await navigator.clipboard.writeText(`${shareData.text}\n${shareData.url}`);
-      alert('餐廳資訊已複製到剪貼簿！可以直接貼給朋友囉～'); 
+      toast.success('餐廳資訊已複製到剪貼簿！可以直接貼給朋友囉～'); 
     } catch (error) {
       console.error('複製失敗', error);
-      alert('抱歉，分享功能目前無法使用。');
+      toast.error('抱歉，分享功能目前無法使用。');
     }
   }
 };
