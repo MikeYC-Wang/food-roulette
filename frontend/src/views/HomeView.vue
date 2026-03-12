@@ -124,10 +124,17 @@
           <a v-if="selectedFood?.id && !isCustomMode" :href="`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedFood.name)}&query_place_id=${selectedFood.id}`" target="_blank" rel="noopener noreferrer" class="w-full bg-bento-primary text-white font-bold py-3 px-6 rounded-xl hover:bg-opacity-90 transition-all flex items-center justify-center shadow-md">
             <i class="fa-solid fa-map-location-dot mr-2"></i> 帶我去吃！
           </a>
-          <button @click="closeResult" class="w-full bg-gray-100 text-gray-700 font-bold py-3 px-6 rounded-xl hover:bg-gray-200 transition-all flex items-center justify-center">
-            <i class="fa-solid fa-rotate-right mr-2"></i> 再轉一次
-          </button>
+          
+          <div class="flex gap-3 w-full">
+            <button @click="shareResult" class="flex-1 bg-blue-50 text-blue-600 font-bold py-3 px-4 rounded-xl hover:bg-blue-100 transition-all flex items-center justify-center shadow-sm border border-blue-100">
+              <i class="fa-solid fa-share-nodes mr-2"></i> 分享
+            </button>
+            <button @click="closeResult" class="flex-1 bg-gray-100 text-gray-700 font-bold py-3 px-4 rounded-xl hover:bg-gray-200 transition-all flex items-center justify-center shadow-sm">
+              <i class="fa-solid fa-rotate-right mr-2"></i> 再轉一次
+            </button>
+          </div>
         </div>
+
       </div>
     </div>
 
@@ -404,6 +411,45 @@ const handleUserIconClick = () => {
     router.push('/profile');
   } else {
     router.push('/login');
+  }
+};
+
+// 處理分享轉盤結果
+const shareResult = async () => {
+  // 確保有抽獎結果 (將 selectedResult 改為 selectedFood)
+  if (!selectedFood.value) return;
+
+  const restaurantName = selectedFood.value.name;
+  const placeId = selectedFood.value.id || ''; // 在 RestaurantInfo 介面裡，它是 id，不是 google_place_id
+  
+  // 組合 Google Maps 連結
+  let mapUrl = `https://www.google.com/maps/search/?api=1&query=$${encodeURIComponent(restaurantName)}`; // 修正模板字串的 $ 符號
+  if (placeId) {
+    mapUrl += `&query_place_id=${placeId}`;
+  }
+
+  const shareData = {
+    title: '食來運轉 - 今晚吃這個！',
+    text: `我剛剛用「食來運轉」抽到了這家餐廳：【${restaurantName}】！\n一起去吃吧 👇\n`,
+    url: mapUrl
+  };
+
+  // 檢查瀏覽器是否支援 Web Share API
+  if (navigator.share) {
+    try {
+      await navigator.share(shareData);
+    } catch (error) {
+      console.log('使用者取消分享或分享失敗', error);
+    }
+  } else {
+    // 備用方案：如果是在不支援的桌機瀏覽器，直接複製到剪貼簿
+    try {
+      await navigator.clipboard.writeText(`${shareData.text}\n${shareData.url}`);
+      alert('餐廳資訊已複製到剪貼簿！可以直接貼給朋友囉～'); 
+    } catch (error) {
+      console.error('複製失敗', error);
+      alert('抱歉，分享功能目前無法使用。');
+    }
   }
 };
 </script>
