@@ -40,7 +40,7 @@
       <button 
         v-if="hasFetchedData"
         @click="triggerSpin" :disabled="isSpinning"
-        class="spin-btn bg-bento-accent text-white text-3xl font-bold mt-6 py-4 px-12 rounded-xl"
+        class="spin-btn bg-bento-accent text-white text-3xl font-bold mt-12 py-4 px-12 rounded-xl"
         :class="{ 'opacity-70 cursor-not-allowed transform translate-y-1 shadow-none': isSpinning }"
       >
         {{ isSpinning ? '轉運中...' : '轉運！' }}
@@ -77,9 +77,19 @@
         </div>
 
         <div class="text-center">
-          <h2 class="text-2xl font-black text-gray-800 mb-2 leading-tight">
-            {{ selectedFood?.name }}
-          </h2>
+          <div class="flex items-center justify-center gap-3 mb-2">
+            <h2 class="text-2xl font-black text-gray-800 leading-tight">
+              {{ selectedFood?.name }}
+            </h2>
+            <button 
+              v-if="selectedFood?.id && !isCustomMode" 
+              @click="toggleFavorite"
+              class="text-3xl transition-transform active:scale-75 focus:outline-none drop-shadow-sm"
+              :class="favoriteIds.includes(selectedFood.id) ? 'text-red-500' : 'text-gray-300 hover:text-red-400'"
+            >
+              <i class="fa-solid fa-heart"></i>
+            </button>
+          </div>
           
           <template v-if="!isCustomMode && selectedFood?.type !== 'N/A'">
             <div class="flex items-center justify-center space-x-3 text-sm mb-3">
@@ -177,6 +187,7 @@ const isFilterOpen = ref(false);
 const isCustomDrawerOpen = ref(false);
 const isCustomMode = ref(false);
 const customList = ref<string[]>([]);
+const favoriteIds = ref<string[]>([]); // 存放使用者已收藏的餐廳 ID
 
 const currentFilters = ref({
   distance: 500, types: [] as string[], features: [] as string[], priceLevels: [] as string[],
@@ -251,9 +262,51 @@ const fetchCustomList = async () => {
   }
 };
 
+const fetchFavorites = async () => {
+  const token = localStorage.getItem('token');
+  if (token) {
+    try {
+      const res = await axios.get('http://127.0.0.1:8001/api/favorites', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      favoriteIds.value = res.data.favorites.map((f: any) => f.google_place_id);
+    } catch (error) {
+      console.error('取得收藏名單失敗', error);
+    }
+  }
+};
+
+const toggleFavorite = async () => {
+  if (!selectedFood.value || !selectedFood.value.id || isCustomMode.value) return;
+  
+  const token = localStorage.getItem('token');
+  if (!token) {
+    alert("請先登入才能收藏餐廳喔！");
+    return;
+  }
+  
+  try {
+    const res = await axios.post('http://127.0.0.1:8001/api/favorites/toggle', {
+      restaurant_name: selectedFood.value.name,
+      google_place_id: selectedFood.value.id
+    }, {
+      headers: { Authorization: `Bearer ${token}` }
+    });
+    
+    if (res.data.status === 'added') {
+      favoriteIds.value.push(selectedFood.value.id);
+    } else if (res.data.status === 'removed') {
+      favoriteIds.value = favoriteIds.value.filter(id => id !== selectedFood.value?.id);
+    }
+  } catch (error) {
+    console.error('收藏切換失敗', error);
+  }
+};
+
 onMounted(() => {
   getLocation();
   fetchCustomList();
+  fetchFavorites(); // 網頁載入時順便抓取使用者的最愛清單
 
   foodInterval = setInterval(() => {
     currentFoodIndex.value = (currentFoodIndex.value + 1) % foodImages.length;

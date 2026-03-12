@@ -35,26 +35,53 @@
           </div>
         </div>
 
+        <div class="flex gap-3 flex-shrink-0">
+          <button @click="activeTab = 'history'" class="flex-1 py-2 rounded-xl font-bold border-2 border-gray-800 transition-all" :class="activeTab === 'history' ? 'bg-bento-primary text-gray-800 translate-y-1' : 'bg-white text-gray-500'" :style="activeTab === 'history' ? '' : 'box-shadow: 2px 2px 0px 0px rgba(31, 41, 55, 1);'">
+            <i class="fa-solid fa-clock-rotate-left mr-1"></i>歷史紀錄
+          </button>
+          <button @click="activeTab = 'favorites'" class="flex-1 py-2 rounded-xl font-bold border-2 border-gray-800 transition-all" :class="activeTab === 'favorites' ? 'bg-red-500 text-white translate-y-1 border-red-700' : 'bg-white text-gray-500'" :style="activeTab === 'favorites' ? '' : 'box-shadow: 2px 2px 0px 0px rgba(31, 41, 55, 1);'">
+            <i class="fa-solid fa-heart mr-1"></i>我的最愛
+          </button>
+        </div>
+
         <div class="flex flex-col flex-1 overflow-hidden">
-          <h3 class="text-lg font-black text-gray-800 mb-3 flex items-center flex-shrink-0">
-            <i class="fa-solid fa-clock-rotate-left mr-2"></i> 最近轉盤紀錄
-          </h3>
           
-          <div v-if="spinHistory.length === 0" class="bg-gray-50 text-center py-6 rounded-xl border-2 border-gray-200 text-gray-500 font-bold">
-            還沒有轉過任何餐廳喔！趕快去首頁試試手氣吧！
-          </div>
-          
-          <div v-else class="flex flex-col gap-3 overflow-y-auto pr-2 pt-2 -mt-2 custom-scrollbar relative">
-            <div v-for="item in spinHistory" :key="item.id" class="bg-white p-3 rounded-xl border-2 border-gray-800 flex justify-between items-center transition-transform hover:-translate-y-1 hover:shadow-sm" style="box-shadow: 2px 2px 0px 0px rgba(31, 41, 55, 1);">
-              <div class="flex-1 min-w-0 pr-3">
-                <div class="font-bold text-gray-800 text-base truncate">{{ item.restaurant_name }}</div>
-                <div class="text-xs text-gray-500 font-bold mt-1">{{ item.spin_time }}</div>
+          <div v-if="activeTab === 'history'" class="h-full flex flex-col">
+            <div v-if="spinHistory.length === 0" class="bg-gray-50 text-center py-6 rounded-xl border-2 border-gray-200 text-gray-500 font-bold">
+              還沒有轉過任何餐廳喔！趕快去試試手氣吧！
+            </div>
+            
+            <div v-else class="flex flex-col gap-3 overflow-y-auto pr-2 pt-2 -mt-2 custom-scrollbar relative h-full">
+              <div v-for="item in spinHistory" :key="item.id" class="bg-white p-3 rounded-xl border-2 border-gray-800 flex justify-between items-center transition-transform hover:-translate-y-1 hover:shadow-sm" style="box-shadow: 2px 2px 0px 0px rgba(31, 41, 55, 1);">
+                <div class="flex-1 min-w-0 pr-3">
+                  <div class="font-bold text-gray-800 text-base truncate">{{ item.restaurant_name }}</div>
+                  <div class="text-xs text-gray-500 font-bold mt-1">{{ item.spin_time }}</div>
+                </div>
+                <a v-if="item.google_place_id" :href="`http://googleusercontent.com/maps.google.com/search/?api=1&query=${encodeURIComponent(item.restaurant_name)}&query_place_id=${item.google_place_id}`" target="_blank" class="bg-bento-primary text-white w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 hover:brightness-110 border-2 border-gray-800 transition-colors">
+                  <i class="fa-solid fa-map-location-dot"></i>
+                </a>
               </div>
-              <a v-if="item.google_place_id" :href="`http://googleusercontent.com/maps.google.com/search/?api=1&query=${encodeURIComponent(item.restaurant_name)}&query_place_id=${item.google_place_id}`" target="_blank" class="bg-bento-primary text-white w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 hover:brightness-110 border-2 border-gray-800 transition-colors">
-                <i class="fa-solid fa-map-location-dot"></i>
-              </a>
             </div>
           </div>
+
+          <div v-if="activeTab === 'favorites'" class="h-full flex flex-col">
+            <div v-if="favoriteList.length === 0" class="bg-gray-50 text-center py-6 rounded-xl border-2 border-gray-200 text-gray-500 font-bold">
+              還沒有收藏餐廳喔！在轉盤結果按下愛心收藏吧！
+            </div>
+            
+            <div v-else class="flex flex-col gap-3 overflow-y-auto pr-2 pt-2 -mt-2 custom-scrollbar relative h-full">
+              <div v-for="item in favoriteList" :key="item.id" class="bg-white p-3 rounded-xl border-2 border-red-500 flex justify-between items-center transition-transform hover:-translate-y-1 hover:shadow-sm" style="box-shadow: 2px 2px 0px 0px #ef4444;">
+                <div class="flex-1 min-w-0 pr-3">
+                  <div class="font-bold text-gray-800 text-base truncate">{{ item.restaurant_name }}</div>
+                  <div class="text-xs text-gray-500 font-bold mt-1">收藏於: {{ item.created_at.split(' ')[0] }}</div>
+                </div>
+                <a :href="`http://googleusercontent.com/maps.google.com/search/?api=1&query=${encodeURIComponent(item.restaurant_name)}&query_place_id=${item.google_place_id}`" target="_blank" class="bg-red-500 text-white w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 hover:bg-red-600 border-2 border-red-700 transition-colors">
+                  <i class="fa-solid fa-map-location-dot"></i>
+                </a>
+              </div>
+            </div>
+          </div>
+
         </div>
 
         <button @click="handleLogout" class="w-full bg-red-500 text-white font-bold text-lg py-3 rounded-xl border-2 border-gray-800 mt-2 flex-shrink-0 transition-transform active:translate-y-1 active:translate-x-1 hover:brightness-110" style="box-shadow: 4px 4px 0px 0px rgba(31, 41, 55, 1);">
@@ -73,12 +100,15 @@ import axios from 'axios';
 
 const router = useRouter();
 const isLoading = ref(true);
+const activeTab = ref('history'); // 控制目前顯示哪一個分頁
+
 const userInfo = ref({
   username: '',
   email: '',
   created_at: ''
 });
 const spinHistory = ref<any[]>([]);
+const favoriteList = ref<any[]>([]); // 存放我的最愛清單
 
 onMounted(async () => {
   const token = localStorage.getItem('token');
@@ -88,13 +118,16 @@ onMounted(async () => {
   }
 
   try {
-    const [userRes, historyRes] = await Promise.all([
+    // 一次打三支 API 拿取個人資料、歷史紀錄、我的最愛
+    const [userRes, historyRes, favRes] = await Promise.all([
       axios.get('http://127.0.0.1:8001/api/me', { headers: { Authorization: `Bearer ${token}` } }),
-      axios.get('http://127.0.0.1:8001/api/history', { headers: { Authorization: `Bearer ${token}` } })
+      axios.get('http://127.0.0.1:8001/api/history', { headers: { Authorization: `Bearer ${token}` } }),
+      axios.get('http://127.0.0.1:8001/api/favorites', { headers: { Authorization: `Bearer ${token}` } })
     ]);
     
     userInfo.value = userRes.data;
     spinHistory.value = historyRes.data.history;
+    favoriteList.value = favRes.data.favorites;
   } catch (error) {
     console.error('取得資料失敗', error);
     localStorage.removeItem('token');

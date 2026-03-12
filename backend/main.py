@@ -102,6 +102,15 @@ async def get_db():
     async with AsyncSessionLocal() as session:
         yield session
 
+# 我的最愛資料表
+class FavoriteRestaurant(Base):
+    __tablename__ = "favorite_restaurants"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    restaurant_name: Mapped[str] = mapped_column()
+    google_place_id: Mapped[str] = mapped_column()
+    created_at: Mapped[datetime] = mapped_column(default=func.now())
+
 # ==========================================
 # 資安輔助函式 (密碼驗證與 Token 產生)
 # ==========================================
@@ -344,6 +353,65 @@ async def update_custom_list(
         
     await db.commit()
     return {"message": "自訂名單已儲存至資料庫"}
+
+# ==========================================
+# API 路由：我的最愛 (需要 JWT Token)
+# ==========================================
+class FavoriteToggle(BaseModel):
+    restaurant_name: str
+    google_place_id: str
+
+@app.post("/api/favorites/toggle")
+async def toggle_favorite(
+    fav: FavoriteToggle, 
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    # 檢查是否已經收藏過這家餐廳
+    result = await db.execute(
+        select(FavoriteRestaurant)
+        .where(FavoriteRestaurant.user_id == current_user.id)
+        .where(FavoriteRestaurant.google_place_id == fav.google_place_id)
+    )
+    existing = result.scalars().first()
+    
+    if existing:
+        # 如果已經收藏，就取消 (刪除)
+        await db.delete(existing)
+        await db.commit()
+        return {"message": "已取消收藏", "status": "removed"}
+    else:
+        # 如果還沒收藏，就新增
+        new_fav = FavoriteRestaurant(
+            user_id=current_user.id,
+            restaurant_name=fav.restaurant_name,
+            google_place_id=fav.google_place_id
+        )
+        db.add(new_fav)
+        await db.commit()
+        return {"message": "已加入收藏", "status": "added"}
+
+@app.get("/api/favorites")
+async def get_favorites(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db)
+):
+    result = await db.execute(
+        select(FavoriteRestaurant)
+        .where(FavoriteRestaurant.user_id == current_user.id)
+        .order_by(FavoriteRestaurant.created_at.desc())
+    )
+    favs = result.scalars().all()
+    return {
+        "favorites": [
+            {
+                "id": f.id,
+                "restaurant_name": f.restaurant_name,
+                "google_place_id": f.google_place_id,
+                "created_at": f.created_at.strftime("%Y-%m-%d %H:%M:%S")
+            } for f in favs
+        ]
+    }
 
 # ==========================================
 # 轉盤 API
