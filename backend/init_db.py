@@ -3,8 +3,7 @@ import os
 from dotenv import load_dotenv
 from sqlalchemy.ext.asyncio import create_async_engine
 
-# 👉 幫你整理好乾淨的 import，確保這 5 個資料表都有被載入
-from main import Base, Restaurant, User, SpinHistory, CustomRestaurant, FavoriteRestaurant
+from main import Base, Restaurant, User, SpinHistory, CustomRestaurant, FavoriteRestaurant, DietRecord
 
 # 載入 .env 環境變數
 load_dotenv()
@@ -27,11 +26,11 @@ async def init_database():
     
     async with engine.begin() as conn:
         print("⚠️ 正在刪除舊資料表 (為了讓新欄位順利套用)...")
-        # 👉 關鍵新增：先 Drop 掉所有舊表
+        # 先 Drop 掉所有舊表
         await conn.run_sync(Base.metadata.drop_all)
         
         print("開始建立全新資料表...")
-        # 👉 再重新 Create，這樣就會包含最新的 avatar_url 欄位了
+        # 再重新 Create，這樣就會包含最新的 DietRecord 欄位了
         await conn.run_sync(Base.metadata.create_all)
         
     print("✅ 所有資料表已重新建立，結構完美同步！")

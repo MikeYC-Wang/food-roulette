@@ -130,6 +130,17 @@ class FavoriteRestaurant(Base):
     google_place_id: Mapped[str] = mapped_column()
     created_at: Mapped[datetime] = mapped_column(default=func.now())
 
+# 飲食手札資料表 (新增)
+class DietRecord(Base):
+    __tablename__ = "diet_records"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"))
+    record_date: Mapped[str] = mapped_column(index=True) # 格式如: '2024-05-12'
+    meal_type: Mapped[str] = mapped_column()             # 如: '早餐', '午餐', '手搖飲'
+    food_name: Mapped[str] = mapped_column()             # 如: '珍珠奶茶'
+    food_category: Mapped[str] = mapped_column()         # 如: '飲料', '便當'
+    price: Mapped[int] = mapped_column(default=0)        # 花費金額
+    created_at: Mapped[datetime] = mapped_column(default=func.now())
 # ==========================================
 # 資安輔助函式 (密碼驗證與 Token 產生)
 # ==========================================
@@ -683,6 +694,10 @@ async def confirm_password_reset(req: PasswordResetConfirm, db: AsyncSession = D
         del reset_codes[req.email]
         
     return {"message": "密碼重設成功！請使用新密碼登入。"}
+
+
+from routers.diet import router as diet_router
+app.include_router(diet_router)
 
 if __name__ == "__main__":
     import uvicorn

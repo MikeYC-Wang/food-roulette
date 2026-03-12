@@ -58,7 +58,7 @@
       </button>
     </main>
 
-    <footer class="fixed bottom-8 left-1/2 transform -translate-x-1/2 bg-white border-[3px] border-gray-800 rounded-full px-8 py-3 flex justify-center items-center gap-10 z-40" style="box-shadow: 4px 4px 0px 0px rgba(31, 41, 55, 1); width: max-content;">
+    <footer class="fixed bottom-8 left-1/2 transform -translate-x-1/2 bg-white border-[3px] border-gray-800 rounded-full px-6 py-3 flex justify-center items-center gap-6 z-40" style="box-shadow: 4px 4px 0px 0px rgba(31, 41, 55, 1); width: max-content;">
         
         <button @click="openAppropriateDrawer" class="text-3xl text-bento-secondary hover:scale-110 transition-transform active:scale-95 drop-shadow-sm">
             <i :class="isCustomMode ? 'fa-solid fa-pen-to-square' : 'fa-solid fa-filter'"></i>
@@ -72,6 +72,10 @@
         
         <button @click="isLocationDrawerOpen = true" class="text-3xl text-bento-primary hover:scale-110 transition-transform active:scale-95 drop-shadow-sm">
             <i class="fa-solid fa-map-location-dot"></i>
+        </button>
+
+        <button @click="goToReport" class="text-3xl text-green-500 hover:scale-110 transition-transform active:scale-95 drop-shadow-sm">
+            <i class="fa-solid fa-chart-simple"></i>
         </button>
 
         <button @click="handleUserIconClick" class="text-3xl text-gray-700 relative hover:scale-110 transition-transform active:scale-95 drop-shadow-sm">
@@ -460,8 +464,17 @@ const currentRouletteColors = computed(() => {
   return isDrinkMode.value ? drinkColors : foodColors;
 });
 
-// --- 生命週期 ---
+// --- 前往飲食手札 (需檢查登入狀態) ---
+const goToReport = () => {
+  if (localStorage.getItem('token')) {
+    router.push('/report');
+  } else {
+    toast.info('登入才能查看專屬飲食手札喔！');
+    router.push('/login');
+  }
+};
 
+// --- 生命週期 ---
 onMounted(() => {
   getLocation();
   fetchCustomList();
