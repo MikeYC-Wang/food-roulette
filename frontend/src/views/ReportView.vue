@@ -1,16 +1,17 @@
 <template>
-  <div class="app-container bg-bento-bg min-h-screen p-6 pb-24">
-    <header class="flex items-center justify-between mb-8">
-      <button @click="$router.push('/')" class="w-10 h-10 bg-white border-2 border-gray-800 rounded-xl flex items-center justify-center text-gray-800 transition-transform active:translate-y-1" style="box-shadow: 2px 2px 0px 0px rgba(31,41,55,1);">
-        <i class="fa-solid fa-chevron-left"></i>
-      </button>
+  <div class="app-container bg-bento-bg min-h-screen p-6 pb-24 relative">
+    
+    <button @click="$router.push('/')" class="absolute top-6 left-6 z-50 w-10 h-10 bg-white border-2 border-gray-800 rounded-xl flex items-center justify-center text-gray-800 transition-transform active:translate-y-1 hover:scale-105" style="box-shadow: 2px 2px 0px 0px rgba(31,41,55,1);">
+      <i class="fa-solid fa-chevron-left"></i>
+    </button>
+
+    <header class="w-full max-w-2xl mx-auto flex items-center justify-center mb-8 mt-2">
       <h1 class="text-2xl font-black text-gray-800 tracking-widest flex items-center gap-3">
         <i class="fa-solid fa-chart-column text-blue-500"></i> 飲食手札
       </h1>
-      <div class="w-10"></div>
     </header>
 
-    <main class="flex flex-col gap-8">
+    <main class="w-full max-w-2xl mx-auto flex flex-col gap-8">
       <section class="bg-bento-primary text-white p-6 rounded-3xl border-4 border-gray-800 relative" style="box-shadow: 4px 4px 0px 0px rgba(31,41,55,1);">
         <h2 class="text-lg font-bold mb-1">本月累計花費</h2>
         <div class="text-4xl font-black flex items-baseline gap-2">
