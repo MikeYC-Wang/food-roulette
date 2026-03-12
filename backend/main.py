@@ -454,7 +454,7 @@ async def get_roulette_data(req: SpinRequest, db: AsyncSession = Depends(get_db)
             "textQuery": f"{query_str} 餐廳", 
             "maxResultCount": fetch_count,
             "languageCode": "zh-TW",
-            "locationRestriction": {
+            "locationBias": {
                 "circle": {
                     "center": {"latitude": req.lat, "longitude": req.lng},
                     "radius": float(req.distance)

@@ -21,7 +21,6 @@
   z-index: 10;
 }
 
-.bg-white.p-3.rounded-xl.border-2.border-gray-800:hover,
 .bg-white.p-3.rounded-xl.border-2.border-red-500:hover {
   z-index: 10;
 }

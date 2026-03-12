@@ -44,15 +44,15 @@
           </button>
         </div>
 
-        <div class="flex flex-col flex-1 overflow-hidden">
+        <div class="flex flex-col flex-1 min-h-0">
           
           <div v-if="activeTab === 'history'" class="h-full flex flex-col">
             <div v-if="spinHistory.length === 0" class="bg-gray-50 text-center py-6 rounded-xl border-2 border-gray-200 text-gray-500 font-bold">
               還沒有轉過任何餐廳喔！趕快去試試手氣吧！
             </div>
             
-            <div v-else class="flex flex-col gap-3 overflow-y-auto pr-2 pt-2 -mt-2 custom-scrollbar relative h-full">
-              <div v-for="item in spinHistory" :key="item.id" class="bg-white p-3 rounded-xl border-2 border-gray-800 flex justify-between items-center transition-transform hover:-translate-y-1 hover:shadow-sm" style="box-shadow: 2px 2px 0px 0px rgba(31, 41, 55, 1);">
+            <div v-else class="flex flex-col gap-3 overflow-y-auto pr-2 pt-2 -mt-2 custom-scrollbar h-full">
+              <div v-for="item in spinHistory" :key="item.id" class="bg-white p-3 rounded-xl border-2 border-gray-800 flex justify-between items-center transition-all duration-200 hover:-translate-y-1 relative z-10 hover:z-50" style="box-shadow: 2px 2px 0px 0px rgba(31, 41, 55, 1);">
                 <div class="flex-1 min-w-0 pr-3">
                   <div class="font-bold text-gray-800 text-base truncate">{{ item.restaurant_name }}</div>
                   <div class="text-xs text-gray-500 font-bold mt-1">{{ item.spin_time }}</div>
@@ -70,7 +70,7 @@
             </div>
             
             <div v-else class="flex flex-col gap-3 overflow-y-auto pr-2 pt-2 -mt-2 custom-scrollbar relative h-full">
-              <div v-for="item in favoriteList" :key="item.id" class="bg-white p-3 rounded-xl border-2 border-red-500 flex justify-between items-center transition-transform hover:-translate-y-1 hover:shadow-sm" style="box-shadow: 2px 2px 0px 0px #ef4444;">
+              <div v-for="item in favoriteList" :key="item.id" class="bg-white p-3 rounded-xl border-2 border-red-500 flex justify-between items-center transition-all duration-200 hover:-translate-y-1 relative z-10 hover:z-50" style="box-shadow: 2px 2px 0px 0px #ef4444;">
                 <div class="flex-1 min-w-0 pr-3">
                   <div class="font-bold text-gray-800 text-base truncate">{{ item.restaurant_name }}</div>
                   <div class="text-xs text-gray-500 font-bold mt-1">收藏於: {{ item.created_at.split(' ')[0] }}</div>
