@@ -70,24 +70,22 @@
         <hr class="w-full border-gray-300">
       </div>
 
-        <div class="flex flex-col gap-3">
-        
-        <button @click="triggerOAuth('Google')" class="w-full bg-white text-gray-700 font-bold py-3 rounded-xl border-2 border-gray-800 flex items-center justify-center gap-3 transition-transform active:translate-y-1 active:translate-x-1" style="box-shadow: 3px 3px 0px 0px rgba(31, 41, 55, 1);">
+      <div class="flex flex-col gap-3">
+        <a href="http://127.0.0.1:8001/api/auth/google" class="w-full bg-white text-gray-700 font-bold py-3 rounded-xl border-2 border-gray-800 flex items-center justify-center gap-3 transition-transform active:translate-y-1 active:translate-x-1" style="box-shadow: 3px 3px 0px 0px rgba(31, 41, 55, 1);">
             <svg version="1.1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" class="w-6 h-6">
-            <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"></path>
-            <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"></path>
-            <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"></path>
-            <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"></path>
-            <path fill="none" d="M0 0h48v48H0z"></path>
+              <path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"></path>
+              <path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.38-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"></path>
+              <path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"></path>
+              <path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"></path>
+              <path fill="none" d="M0 0h48v48H0z"></path>
             </svg>
             Google 登入
-        </button>
+        </a>
 
-        <button @click="triggerOAuth('LINE')" class="w-full bg-[#06C755] text-white font-bold py-3 rounded-xl border-2 border-gray-800 flex items-center justify-center gap-3 transition-transform active:translate-y-1 active:translate-x-1" style="box-shadow: 3px 3px 0px 0px rgba(31, 41, 55, 1);">
+        <a href="http://127.0.0.1:8001/api/auth/line" class="w-full bg-[#06C755] text-white font-bold py-3 rounded-xl border-2 border-gray-800 flex items-center justify-center gap-3 transition-transform active:translate-y-1 active:translate-x-1" style="box-shadow: 3px 3px 0px 0px rgba(31, 41, 55, 1);">
             <i class="fa-brands fa-line text-2xl"></i> LINE 登入
-        </button>
-
-        </div>
+        </a>
+      </div>
 
       <div class="mt-8 text-center">
         <button @click="toggleMode" type="button" class="text-bento-primary font-bold hover:underline">
@@ -99,11 +97,12 @@
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
-import { useRouter } from 'vue-router';
+import { ref, onMounted } from 'vue';
+import { useRouter, useRoute } from 'vue-router'; // 引入 useRoute 讀取網址參數
 import axios from 'axios';
 
 const router = useRouter();
+const route = useRoute(); // 初始化 route
 const isLoginMode = ref(true);
 
 const username = ref('');
@@ -123,6 +122,21 @@ const message = ref('');
 const messageType = ref<'success' | 'error'>('success');
 
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+// 生命週期鉤子，檢查是否有 OAuth 回傳的 Token
+onMounted(() => {
+  const token = route.query.token as string;
+  if (token) {
+    localStorage.setItem('token', token);
+    messageType.value = 'success';
+    message.value = '社群登入成功！跳轉中...';
+    
+    // 延遲一下讓使用者看到成功訊息再跳轉
+    setTimeout(() => {
+      router.push('/');
+    }, 1500);
+  }
+});
 
 const toggleMode = () => {
   isLoginMode.value = !isLoginMode.value;
@@ -237,9 +251,5 @@ const handleSubmit = async () => {
   } finally {
     isLoading.value = false;
   }
-};
-
-const triggerOAuth = (provider: string) => {
-  alert(`即將實作 ${provider} 快速登入！\n(需要先至開發者後台申請 API Key)`);
 };
 </script>

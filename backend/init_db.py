@@ -5,8 +5,6 @@ from sqlalchemy.ext.asyncio import create_async_engine
 from main import Base, Restaurant, User, SpinHistory, CustomRestaurant
 from main import Base, Restaurant, User, SpinHistory, CustomRestaurant, FavoriteRestaurant
 
-# ⚠️ 這裡非常重要：必須引入你在 main.py 定義的 Base 與所有資料表模型
-# 新增了 User 和 SpinHistory，這樣 SQLAlchemy 才知道要建這三張表
 from main import Base, Restaurant, User, SpinHistory
 
 # 載入 .env 環境變數
