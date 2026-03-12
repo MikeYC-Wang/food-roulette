@@ -65,7 +65,7 @@
         <span v-if="isLoggedIn" class="absolute top-0 right-0 block h-3 w-3 rounded-full bg-green-500 ring-2 ring-white"></span>
       </button>
       
-      <button class="bottom-icon-btn text-bento-primary">
+      <button @click="isLocationDrawerOpen = true" class="bottom-icon-btn text-bento-primary">
         <i class="fa-solid fa-map-location-dot"></i>
       </button>
     </footer>
@@ -133,6 +133,7 @@
 
     <FilterDrawer v-model:isOpen="isFilterOpen" @apply="handleApplyFilters" />
     <CustomListDrawer v-model:isOpen="isCustomDrawerOpen" :initialList="customList" @apply="handleApplyCustomList" />
+    <LocationDrawer v-model:isOpen="isLocationDrawerOpen" :currentLat="location.lat" :currentLng="location.lng" @apply-location="handleApplyLocation" />
   </div>
 </template>
 
@@ -144,6 +145,7 @@ import Roulette from '../components/Roulette.vue';
 import FilterDrawer from '../components/FilterDrawer.vue';
 import CustomListDrawer from '../components/CustomListDrawer.vue';
 import { useLocation } from '../composables/useLocation';
+import LocationDrawer from '../components/LocationDrawer.vue';
 
 import logoImg from '../assets/LOGO-去背.png';
 import food1 from '../assets/food1.png';
@@ -151,6 +153,23 @@ import food2 from '../assets/food2.png';
 import food3 from '../assets/food3.png';
 import food4 from '../assets/food4.png';
 import food5 from '../assets/food5.png';
+
+const isLocationDrawerOpen = ref(false);
+// 當使用者在任意門按下「我要吃這附近」時觸發
+const handleApplyLocation = async (newLoc: any) => {
+  // 修改首頁的定位資料
+  location.value.lat = newLoc.lat;
+  location.value.lng = newLoc.lng;
+  location.value.message = newLoc.name;
+  location.value.status = 'success';
+  
+  // 如果現在是「附近探索」模式，就立刻幫他重新掃描新地點的美食！
+  if (!isCustomMode.value) {
+    hasFetchedData.value = false;
+    showResult.value = false;
+    await fetchRestaurants();
+  }
+};
 
 interface RestaurantInfo {
   id?: string;

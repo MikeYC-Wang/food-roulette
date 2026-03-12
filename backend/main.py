@@ -414,6 +414,44 @@ async def get_favorites(
     }
 
 # ==========================================
+# API 路由：任意門 (地點搜尋)
+# ==========================================
+@app.get("/api/search-location")
+async def search_location(query: str):
+    try:
+        url = "https://places.googleapis.com/v1/places:searchText"
+        headers = {
+            "Content-Type": "application/json",
+            "X-Goog-Api-Key": GOOGLE_MAPS_API_KEY,
+            "X-Goog-FieldMask": "places.displayName,places.location,places.formattedAddress"
+        }
+        payload = {
+            "textQuery": query,
+            "languageCode": "zh-TW",
+            "maxResultCount": 5
+        }
+        async with httpx.AsyncClient() as client:
+            resp = await client.post(url, json=payload, headers=headers)
+            if resp.status_code == 200:
+                places = resp.json().get("places", [])
+                results = []
+                for p in places:
+                    name = p.get("displayName", {}).get("text", "")
+                    addr = p.get("formattedAddress", "")
+                    loc = p.get("location", {})
+                    if loc and name:
+                        results.append({
+                            "name": name, 
+                            "address": addr, 
+                            "lat": loc.get("latitude"), 
+                            "lng": loc.get("longitude")
+                        })
+                return {"status": "success", "results": results}
+            return {"status": "error", "message": "Google API 錯誤"}
+    except Exception as e:
+        return {"status": "error", "message": str(e)}
+    
+# ==========================================
 # 轉盤 API
 # ==========================================
 class SpinRequest(BaseModel):
