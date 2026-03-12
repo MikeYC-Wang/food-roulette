@@ -45,12 +45,21 @@ interface RouletteOption {
   rating?: number;
 }
 
-const options = ref<RouletteOption[]>([{ name: '等待設定中...' }]);
-const wheelRotation = ref(0);
-const isSpinning = ref(false);
+// 定義 Props，接收外部傳入的顏色清單
+const props = defineProps<{
+  colors?: string[];
+}>();
+
 const emit = defineEmits<{
   (e: 'spin-end', result: RouletteOption): void
 }>();
+
+// 預設配色 (美食模式)
+const defaultColors = ['#E9C46A', '#2A9D8F', '#F4F1DE', '#E76F51', '#A8DADC', '#F1FAEE'];
+
+const options = ref<RouletteOption[]>([{ name: '等待設定中...' }]);
+const wheelRotation = ref(0);
+const isSpinning = ref(false);
 
 // 1. 動態計算每一格的角度
 const segmentDegree = computed(() => {
@@ -58,17 +67,19 @@ const segmentDegree = computed(() => {
   return count > 0 ? 360 / count : 360;
 });
 
-// 2. 動態生成轉盤樣式 (背景顏色與旋轉動畫)
+// 2. 動態生成轉盤樣式 (連動模式顏色)
 const wheelStyle = computed(() => {
-  const colors = ['#E9C46A', '#2A9D8F', '#F4F1DE', '#E76F51', '#A8DADC', '#F1FAEE'];
+  // 優先使用 props 傳進來的顏色，若無則使用預設色
+  const activeColors = props.colors && props.colors.length > 0 ? props.colors : defaultColors;
   const count = options.value.length;
   
   let gradientStr = '';
   if (count <= 1) {
-    gradientStr = colors[0]!;
+    gradientStr = activeColors[0]!;
   } else {
     const steps = options.value.map((_, i) => {
-      const color = colors[i % colors.length]!;
+      // 根據索引從色卡中取色
+      const color = activeColors[i % activeColors.length]!;
       const start = i * segmentDegree.value;
       const end = (i + 1) * segmentDegree.value;
       return `${color} ${start}deg ${end}deg`;
@@ -105,10 +116,13 @@ const spin = () => {
   const prizeIndex = Math.floor(Math.random() * count);
   
   const currentRotation = wheelRotation.value;
+  // 確保旋轉角度是累加的，避免轉盤倒轉
   const baseRotation = Math.ceil(currentRotation / 360) * 360;
   
+  // 增加一點隨機偏移，讓指針不會每次都指在正中間
   const randomOffset = Math.floor(Math.random() * (segmentDegree.value * 0.6)) - (segmentDegree.value * 0.3);
   
+  // 計算目標角度 (轉 5 圈 + 目標格位置)
   const targetDegree = baseRotation + 1800 + (360 - (prizeIndex * segmentDegree.value)) - (segmentDegree.value / 2) + randomOffset;
 
   wheelRotation.value = targetDegree;

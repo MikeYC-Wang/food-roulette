@@ -27,7 +27,11 @@
     </header>
 
     <main class="flex-1 flex flex-col items-center justify-start pt-6 pb-28 w-full px-4 z-20">
-      <Roulette ref="rouletteRef" @spin-end="handleSpinEnd" />
+      <Roulette 
+        ref="rouletteRef" 
+        :colors="currentRouletteColors" 
+        @spin-end="handleSpinEnd" 
+      />
       
       <div class="bg-gray-200 rounded-full p-1 mt-6 flex relative w-64 border-2 border-gray-800" style="box-shadow: 2px 2px 0px 0px rgba(31, 41, 55, 1);">
         <div class="absolute inset-y-1 left-1 w-[calc(50%-4px)] bg-white rounded-full transition-transform duration-300 shadow-sm"
@@ -437,6 +441,24 @@ const shareResult = async () => {
     }
   }
 };
+
+// 1. 美食模式配色 (鮮豔、熱情)
+const foodColors = ['#E9C46A', '#2A9D8F', '#F4F1DE', '#E76F51', '#A8DADC', '#F1FAEE'];
+
+// 2. 手搖飲模式配色 (療癒奶茶系 🧋)
+const drinkColors = [
+  '#E6CCB2',
+  '#DDB892',
+  '#B08968',
+  '#7F5539',
+  '#9C6644',
+  '#EDE0D4'
+];
+
+// 3. 計算目前應該顯示哪種配色
+const currentRouletteColors = computed(() => {
+  return isDrinkMode.value ? drinkColors : foodColors;
+});
 
 // --- 生命週期 ---
 
