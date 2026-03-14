@@ -424,8 +424,10 @@ const shareResult = async () => {
   if (!selectedFood.value) return;
   const restaurantName = selectedFood.value.name;
   const placeId = selectedFood.value.id || ''; 
-  let mapUrl = `http://googleusercontent.com/maps.google.com/${encodeURIComponent(restaurantName)}`; 
-  if (placeId) mapUrl += `&query_place_id=${placeId}`;
+  let mapUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(restaurantName)}`; 
+  if (placeId) {
+    mapUrl += `&query_place_id=${placeId}`;
+  }
 
   const shareData = {
     title: '食來運轉 - 今晚吃這個！',
