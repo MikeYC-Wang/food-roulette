@@ -1,8 +1,8 @@
 <template>
   <div class="min-h-screen bg-bento-bg flex flex-col items-center justify-center p-4 relative overflow-hidden">
     
-    <button @click="$router.push('/')" class="absolute top-8 left-6 text-2xl text-gray-700 hover:text-bento-primary transition-colors z-20">
-      <i class="fa-solid fa-arrow-left"></i>
+    <button @click="$router.push('/')" class="absolute top-6 left-6 z-50 w-10 h-10 bg-white border-2 border-gray-800 rounded-xl flex items-center justify-center text-gray-800 transition-transform active:translate-y-1 hover:scale-105" style="box-shadow: 2px 2px 0px 0px rgba(31,41,55,1);">
+      <i class="fa-solid fa-chevron-left"></i>
     </button>
 
     <div class="w-full max-w-md bg-white rounded-3xl p-8 border-4 border-gray-800 relative z-10" style="box-shadow: 8px 8px 0px 0px rgba(31, 41, 55, 1);">
