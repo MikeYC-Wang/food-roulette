@@ -113,7 +113,7 @@
           </template>
         </div>
         <div class="flex flex-col space-y-3 mt-2">
-          <a v-if="selectedFood?.id && !isCustomMode" :href="`http://googleusercontent.com/maps.google.com/${encodeURIComponent(selectedFood.name)}&query_place_id=${selectedFood.id}`" target="_blank" rel="noopener noreferrer" class="w-full bg-bento-primary text-white font-bold py-3 px-6 rounded-xl hover:bg-opacity-90 transition-all flex items-center justify-center shadow-md">
+          <a v-if="selectedFood?.id && !isCustomMode" :href="`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(selectedFood.name)}&query_place_id=${selectedFood.id}`" target="_blank" rel="noopener noreferrer" class="w-full bg-bento-primary text-white font-bold py-3 px-6 rounded-xl hover:bg-opacity-90 transition-all flex items-center justify-center shadow-md">
             <i class="fa-solid fa-map-location-dot mr-2"></i> 帶我去吃！
           </a>
           <div class="flex gap-3 w-full">

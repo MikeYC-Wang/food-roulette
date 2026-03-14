@@ -6,6 +6,9 @@ const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8001',
 });
 
+// 定義防抖鎖，用來防止併發 API 觸發多次 401 錯誤
+let isTokenExpiredAlerted = false;
+
 // 請求攔截器 (出發前檢查)
 api.interceptors.request.use(
   (config) => {
@@ -30,14 +33,25 @@ api.interceptors.response.use(
   (error) => {
     // 如果後端回傳 401 (未授權/Token過期)
     if (error.response?.status === 401) {
-      localStorage.removeItem('token');
-      localStorage.removeItem('username');
-      toast.error('登入已過期，請重新登入 🔒');
       
-      // 延遲一下讓使用者看到 Toast，再跳轉回登入頁
-      setTimeout(() => {
-        window.location.href = '/login';
-      }, 1500);
+      // 檢查鎖是否為 false，確認這段期間內是「第一次」發生 401 才執行
+      if (!isTokenExpiredAlerted) {
+        isTokenExpiredAlerted = true; // 立刻鎖上，擋住後續同時發生的 401 請求
+        
+        localStorage.removeItem('token');
+        localStorage.removeItem('username');
+        toast.error('登入已過期，請重新登入 🔒');
+        
+        // 延遲一下讓使用者看到 Toast，再跳轉回登入頁
+        setTimeout(() => {
+          window.location.href = '/login';
+        }, 1500);
+
+        // 3 秒後自動解鎖（雖然畫面已經跳轉，但加上解鎖是更保險的 SPA 寫法）
+        setTimeout(() => {
+          isTokenExpiredAlerted = false;
+        }, 3000);
+      }
     }
     return Promise.reject(error);
   }
