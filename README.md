@@ -259,24 +259,11 @@ http://localhost:5173
 
 ---
 
-# 📱 畫面截圖 (Screenshots)
+## 📱 畫面截圖 (Screenshots)
 
-## 美食轉盤首頁
-
-（放截圖）
-
-## 飲食手札分析
-
-（放圖表截圖）
-
-建議將圖片放在：
-
-```
-frontend/public/
-```
-
-然後在 README 使用圖片連結。
-
+| 美食轉盤 - 首頁 (1) | 美食轉盤 - 首頁 (2) | 美食轉盤 - 登入頁面 |
+| :---: | :---: | :---: |
+| ![首頁截圖1](frontend/public/Homepage_screenshot_1.png) | ![首頁截圖2](frontend/public/Homepage_screenshot_2.png) | ![登入頁面截圖](frontend/public/Homepage_screenshot_3.png) |
 ---
 
 # 👨‍💻 作者 (Author)
