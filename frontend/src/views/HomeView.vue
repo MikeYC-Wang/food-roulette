@@ -1,6 +1,6 @@
 <template>
   <div class="app-container bg-bento-bg relative">
-    <header class="pt-4 text-center flex flex-col items-center z-10 w-full">
+    <header class="text-center flex flex-col items-center z-10 w-full">
       <h1 class="flex justify-center w-full px-4">
         <img :src="logoImg" alt="食來運轉" class="h-[8rem] md:h-[13rem] object-contain drop-shadow-sm transition-all duration-300" />
       </h1>
