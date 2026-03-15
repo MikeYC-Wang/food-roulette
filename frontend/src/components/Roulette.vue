@@ -20,9 +20,8 @@
             <div 
               class="item-text text-gray-800 font-bold"
               :style="{ 
-                /* 配合 480px 轉盤，將位移調整至 -150px 讓文字分佈更均勻 */
-                transform: `translate(-50%, -50%) rotate(${options.length === 1 ? 0 : segmentDegree / 2}deg) translateY(-150px)`,
-                fontSize: '18px'
+                transform: `translate(-50%, -50%) rotate(${options.length === 1 ? 0 : segmentDegree / 2}deg) translateY(var(--text-offset))`,
+                fontSize: 'var(--text-size)'
               }"
             >
               {{ item.name }}

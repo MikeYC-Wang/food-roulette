@@ -1,9 +1,20 @@
 .roulette-wrapper {
   @apply relative flex justify-center items-center;
-  width: 480px;
-  height: 480px;
+  width: 320px;
+  height: 320px;
   max-width: 90vw; 
   max-height: 90vw;
+  --text-offset: -100px; 
+  --text-size: 14px;      
+}
+
+@media (min-width: 768px) {
+  .roulette-wrapper {
+    width: 480px;
+    height: 480px;
+    --text-offset: -150px;
+    --text-size: 18px;
+  }
 }
 
 .pointer {
@@ -36,6 +47,12 @@
   @apply absolute tracking-tighter leading-tight text-center flex items-center justify-center;
   top: 50%;
   left: 50%;
-  width: 120px;
+  width: 90px; 
   word-break: break-all;
+}
+
+@media (min-width: 768px) {
+  .item-text {
+    width: 120px; 
+  }
 }

@@ -2,7 +2,7 @@
   <div class="app-container bg-bento-bg relative">
     <header class="pt-4 text-center flex flex-col items-center z-10 w-full">
       <h1 class="flex justify-center w-full px-4">
-        <img :src="logoImg" alt="食來運轉" class="h-[13rem] object-contain drop-shadow-sm" />
+        <img :src="logoImg" alt="食來運轉" class="h-[8rem] md:h-[13rem] object-contain drop-shadow-sm transition-all duration-300" />
       </h1>
 
       <div v-if="!isCustomMode" class="location-status mt-4 flex items-center justify-center gap-2 relative z-20">
@@ -14,13 +14,13 @@
         <span class="text-sm font-bold text-gray-600">目前為自訂名單模式</span>
       </div>
 
-      <div v-if="location.status !== 'loading'" class="h-40 relative flex items-center justify-center w-full">
+      <div v-if="location.status !== 'loading'" class="h-28 md:h-40 relative flex items-center justify-center w-full md:mt-0">
         <Transition name="food-fade">
           <img 
             :key="currentFoodIndex"
             :src="foodImages[currentFoodIndex]" 
             alt="food indicator"
-            class="floating-food absolute h-56 w-56 object-contain scale-[1.8] pointer-events-none" 
+            class="floating-food absolute h-32 w-32 md:h-56 md:w-56 object-contain scale-[1.2] md:scale-[1.8] pointer-events-none transition-all duration-300" 
           />
         </Transition>
       </div>
@@ -43,7 +43,7 @@
       <button 
         v-if="hasFetchedData"
         @click="triggerSpin" :disabled="isSpinning"
-        class="spin-btn bg-bento-accent text-white text-3xl font-bold mt-12 py-4 px-12 rounded-xl"
+        class="spin-btn bg-bento-accent text-white text-2xl md:text-3xl font-bold mt-8 md:mt-12 py-3 px-8 md:py-4 md:px-12 rounded-xl"
         :class="{ 'opacity-70 cursor-not-allowed transform translate-y-1 shadow-none': isSpinning }"
       >
         {{ isSpinning ? '轉運中...' : '轉運！' }}
@@ -52,7 +52,7 @@
       <button 
         v-else
         @click="openAppropriateDrawer"
-        class="spin-btn bg-bento-primary text-white text-3xl font-bold mt-12 py-4 px-12 rounded-xl animate-bounce"
+        class="spin-btn bg-bento-primary text-white text-xl md:text-3xl font-bold mt-8 md:mt-12 py-3 px-6 md:py-4 md:px-12 rounded-xl animate-bounce"
       >
         <i class="fa-solid fa-hand-pointer mr-2"></i>{{ isCustomMode ? '請先建立名單' : '請先設定篩選條件' }}
       </button>
@@ -237,7 +237,7 @@ const fetchRestaurants = async () => {
       spinCount: currentFilters.value.spinCount,
       openNow: currentFilters.value.openNow,
       highRating: currentFilters.value.highRating,
-      isDrinkMode: isDrinkMode.value // 👉 傳遞模式給後端
+      isDrinkMode: isDrinkMode.value
     });
 
     if (response.data.status === 'success' && rouletteRef.value) {
@@ -254,7 +254,7 @@ const fetchRestaurants = async () => {
 const switchMode = (toCustom: boolean) => {
   isCustomMode.value = toCustom;
   if (toCustom) isDrinkMode.value = false; 
-  hasFetchedData.value = false; // 👉 重置，要求使用者重新設定
+  hasFetchedData.value = false;
   if (rouletteRef.value) {
     rouletteRef.value.setOptions([{ name: '等待設定中...', type: 'N/A', rating: 0 }]);
   }
@@ -267,7 +267,7 @@ const toggleDrinkMode = async () => {
   }
   
   isDrinkMode.value = !isDrinkMode.value;
-  hasFetchedData.value = false; // 👉 重要：切換模式後要求重新設定，不自動抓取
+  hasFetchedData.value = false;
   showResult.value = false;
 
   if (isDrinkMode.value) {
@@ -401,7 +401,7 @@ const openAppropriateDrawer = () => {
 const handleApplyFilters = async (filters: any) => {
   currentFilters.value = filters;
   showResult.value = false;
-  await fetchRestaurants(); // 👈 只有這裡會觸發資料抓取
+  await fetchRestaurants();
 };
 
 const handleApplyCustomList = async (newList: string[]) => {
