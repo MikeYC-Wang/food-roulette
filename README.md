@@ -114,7 +114,7 @@
 
 ---
 
-# 1️⃣ 取得專案代碼
+# 1. 取得專案代碼
 
 ```bash
 git clone https://github.com/MikeYC-Wang/food-roulette.git
@@ -123,7 +123,7 @@ cd food-roulette
 
 ---
 
-# 2️⃣ 後端設定 (Backend)
+# 2. 後端設定 (Backend)
 
 進入 backend 目錄：
 
@@ -215,7 +215,7 @@ http://127.0.0.1:8001/docs
 
 ---
 
-# 3️⃣ 前端設定 (Frontend)
+# 3. 前端設定 (Frontend)
 
 開啟新的終端機
 
